@@ -1,0 +1,54 @@
+name: Apply PostgreSQL migrations (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Enter MIGRATE to confirm production database schema changes"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-database-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: ${{ inputs.confirmation == 'MIGRATE' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+    steps:
+      - name: Check out reviewed main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Verify database connection secret is configured
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ] && [ -z "$DIRECT_URL" ]; then
+            echo "::error::No production database URL is configured. Add DATABASE_URL (and optionally DIRECT_URL) in repository Settings > Environments > production."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Apply committed Prisma migrations
+        run: npm run db:deploy
+
+      - name: Verify migration status
+        run: npx prisma migrate status

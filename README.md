@@ -99,3 +99,18 @@ Apply all database schema changes, including the migration that removes identifi
 Next.js and Prisma do not provision PostgreSQL automatically. Create a managed PostgreSQL database (for example, Neon through Vercel Marketplace), connect it to the Vercel project, and configure `DATABASE_URL` for the deployment. If your provider exposes a direct, unpooled connection, configure `DIRECT_URL` for migrations.
 
 Run `npm run db:deploy` against that database **before** using the app; this is a separate controlled step from the Next.js build. Automatic Vercel deployments are disabled in `vercel.json`. Never commit credentials or put them in `NEXT_PUBLIC_*` variables.
+
+## Fix: live database tables are missing or outdated
+
+The GitHub CI pipeline uses **an isolated temporary PostgreSQL database**. It does not update your Vercel production database. Deploying a Next.js build also does not run Prisma migrations automatically.
+
+To apply the existing migrations to **the exact PostgreSQL instance used by the deployed app**:
+
+1. Confirm the database provider is running and the Vercel project's production `DATABASE_URL` points to it. Never commit a database URL or paste it into an issue/chat.
+2. In GitHub repository **Settings → Environments**, create or open the `production` environment. Add a protected secret named `DATABASE_URL` using the same database credentials/target as Vercel. If your provider offers a separate direct (nonpooling) connection, add `DIRECT_URL` as well. Require a reviewer on the production environment if your plan supports it.
+3. Open **Actions → Apply PostgreSQL migrations (manual) → Run workflow**. Use the **main** branch and enter `MIGRATE` in the confirmation input. The workflow has no push/schedule trigger.
+4. Confirm **Apply committed Prisma migrations** and **Verify migration status** pass. Refresh the deployed app and check the Projects, Employees and Equipments pages.
+
+Alternatively, apply migrations from a trusted local terminal with correctly configured `.env`: `npm install && npm run db:deploy && npx prisma migrate status`.
+
+Do **not** run `prisma db push` to repair production. The migrations preserve existing assignments and remove only the catalog identifier uniqueness constraints that prevented duplicate Excel imports.
