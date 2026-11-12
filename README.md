@@ -114,3 +114,13 @@ To apply the existing migrations to **the exact PostgreSQL instance used by the 
 Alternatively, apply migrations from a trusted local terminal with correctly configured `.env`: `npm install && npm run db:deploy && npx prisma migrate status`.
 
 Do **not** run `prisma db push` to repair production. The migrations preserve existing assignments and remove only the catalog identifier uniqueness constraints that prevented duplicate Excel imports.
+
+## Vercel-managed migrations on each manual deploy
+
+Vercel's build command (set in `vercel.json`) runs `npm run vercel-build`, which performs these actions in order: `prisma generate`, `prisma migrate deploy`, and `next build`. It applies pending committed SQL migrations to PostgreSQL before deploying the Next.js build. **No separate migration workflow is needed for normal manual Vercel releases.**
+
+- In Vercel's **Production** environment variables, configure `DATABASE_URL` for the application's PostgreSQL database and, when provided, `DIRECT_URL` for migrations. Verify that both target the same intended database/branch/schema. Do not commit or expose their values.
+- Keep Git deployments disabled (`vercel.json` has `git.deploymentEnabled=false`). Run your normal manual production deployment; it applies pending migrations as part of the Vercel build.
+- Database changes are **not rolled back** by reversing a Vercel deployment. Review migrations before releasing, back up important data, and keep the production database separate from preview deployments.
+- `npm run build` remains a regular Next.js-only local build. GitHub CI uses `npm run vercel-build` against a temporary PostgreSQL database to test this deployment sequence without touching production.
+- The older manually triggered GitHub migration workflow remains available as an emergency/manual fallback, but is not required for normal deployments.
