@@ -62,7 +62,7 @@ export async function parseCatalogExcel(file: File, kind: CatalogKind): Promise<
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   const data = new Uint8Array(await file.arrayBuffer());
-  await workbook.xlsx.load(data as Parameters<typeof workbook.xlsx.load>[0]);
+  await workbook.xlsx.load(data as unknown as Parameters<typeof workbook.xlsx.load>[0]);
 
   const fields = catalogConfigs[kind].fields;
   const mapAliases = new Map<string, string>();
