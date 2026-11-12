@@ -8,20 +8,36 @@ datasource db {
 }
 
 model Project {
-  id         String     @id @default(cuid())
-  name       String
-  clientName String
-  schedules  Schedule[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  soNo            String     @default("")
+  jobNo           String?
+  rev             String     @default("")
+  clientName      String
+  mainCategory    String     @default("")
+  subCategory     String     @default("")
+  name            String
+  descriptions    String     @default("") @db.Text
+  contractValue   String     @default("")
+  paymentTerms    String     @default("") @db.Text
+  status          String     @default("")
+  projectInCharge String     @default("")
+  schedules       Schedule[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
+  @@unique([jobNo, rev])
   @@index([name])
 }
 
 model Employee {
   id          String             @id @default(cuid())
+  employeeCode String?            @unique
   name        String
-  trade       String
+  designation String
+  location    String             @default("")
+  category    String             @default("")
+  joiningDate String             @default("")
+  remarks     String             @default("") @db.Text
   assignments ScheduleEmployee[]
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
@@ -30,19 +46,23 @@ model Employee {
 }
 
 model Equipment {
-  id          String              @id @default(cuid())
-  name        String
-  category    String
-  assignments ScheduleEquipment[]
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id             String              @id @default(cuid())
+  registrationNo String?             @unique
+  vehicleType    String
+  vehicleDetails String
+  limit          String              @default("")
+  modelYear      String              @default("")
+  remarks        String              @default("") @db.Text
+  assignments    ScheduleEquipment[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
-  @@index([name])
+  @@index([vehicleDetails])
 }
 
 model Schedule {
   id         String              @id @default(cuid())
-  date       String              // YYYY-MM-DD; avoids timezone shifts in daily site schedules
+  date       String              // YYYY-MM-DD; site-local calendar date
   jobNo      String
   projectId  String
   project    Project             @relation(fields: [projectId], references: [id], onDelete: Restrict)

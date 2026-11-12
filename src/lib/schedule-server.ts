@@ -24,6 +24,6 @@ export function scheduleDto(row: ScheduleRecord) {
     employeeIds: row.employees.map((item) => item.employeeId),
     equipmentIds: row.equipments.map((item) => item.equipmentId),
     labours: row.employees.map((item) => item.employee.name).join(", "),
-    equipment: row.equipments.map((item) => item.equipment.name).join(", "),
+    equipment: row.equipments.map((item) => item.equipment.vehicleDetails).join(", "),
   };
 }

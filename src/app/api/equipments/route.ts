@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const equipments = await getPrisma().equipment.findMany({
-      orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+      orderBy: [{ vehicleDetails: "asc" }, { createdAt: "asc" }],
     });
     return NextResponse.json(equipments);
   } catch (error) { return apiError(error); }

@@ -501,7 +501,7 @@ export function ScheduleTracker() {
                         checked={draft.employeeIds.includes(employee.id)}
                         onChange={(event) => toggleResource("employeeIds", employee.id, event.target.checked)}
                       />
-                      <span>{employee.name}{employee.trade ? <span className="text-muted-foreground"> · {employee.trade}</span> : null}</span>
+                      <span>{employee.name}{employee.designation ? <span className="text-muted-foreground"> · {employee.designation}</span> : null}</span>
                     </label>
                   ))}
                 </div>
@@ -519,7 +519,7 @@ export function ScheduleTracker() {
                         checked={draft.equipmentIds.includes(equipment.id)}
                         onChange={(event) => toggleResource("equipmentIds", equipment.id, event.target.checked)}
                       />
-                      <span>{equipment.name}{equipment.category ? <span className="text-muted-foreground"> · {equipment.category}</span> : null}</span>
+                      <span>{equipment.vehicleDetails}{equipment.vehicleType ? <span className="text-muted-foreground"> · {equipment.vehicleType}</span> : null}</span>
                     </label>
                   ))}
                 </div>
