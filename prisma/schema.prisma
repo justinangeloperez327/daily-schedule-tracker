@@ -25,13 +25,13 @@ model Project {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  @@unique([jobNo, rev])
+  @@index([jobNo, rev])
   @@index([name])
 }
 
 model Employee {
   id          String             @id @default(cuid())
-  employeeCode String?            @unique
+  employeeCode String?
   name        String
   designation String
   location    String             @default("")
@@ -43,11 +43,12 @@ model Employee {
   updatedAt   DateTime           @updatedAt
 
   @@index([name])
+  @@index([employeeCode])
 }
 
 model Equipment {
   id             String              @id @default(cuid())
-  registrationNo String?             @unique
+  registrationNo String?
   vehicleType    String
   vehicleDetails String
   limit          String              @default("")
@@ -58,6 +59,7 @@ model Equipment {
   updatedAt      DateTime            @updatedAt
 
   @@index([vehicleDetails])
+  @@index([registrationNo])
 }
 
 model Schedule {

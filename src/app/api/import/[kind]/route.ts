@@ -21,6 +21,7 @@ export async function POST(request: Request, context: Context) {
     if (kind !== "projects" && kind !== "employees" && kind !== "equipments") {
       return NextResponse.json({ error: "Invalid import category." }, { status: 404 });
     }
+
     const batch = batchSchema.parse(await parseJson(request));
     const parsed = parseRows(kind, batch.rows);
     if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
@@ -28,22 +29,21 @@ export async function POST(request: Request, context: Context) {
     const prisma = getPrisma();
     let created = 0;
 
+    // Each valid Excel row is inserted as its own record. Duplicates are permitted.
+    // Keep one createMany per import for transaction-level all-or-nothing behavior.
     if (kind === "projects") {
-      const result = await prisma.project.createMany({ data: parsed.projects, skipDuplicates: true });
-      created = result.count;
+      created = (await prisma.project.createMany({ data: parsed.projects })).count;
     } else if (kind === "employees") {
-      const result = await prisma.employee.createMany({ data: parsed.employees, skipDuplicates: true });
-      created = result.count;
+      created = (await prisma.employee.createMany({ data: parsed.employees })).count;
     } else {
-      const result = await prisma.equipment.createMany({ data: parsed.equipments, skipDuplicates: true });
-      created = result.count;
+      created = (await prisma.equipment.createMany({ data: parsed.equipments })).count;
     }
 
     return NextResponse.json({
       created,
-      skipped: batch.rows.length - created,
+      skipped: 0,
       total: batch.rows.length,
-      message: "Existing records with the same identifier were skipped, not overwritten.",
+      message: "All valid rows were imported, including duplicate records.",
     });
   } catch (error) {
     return apiError(error);
@@ -51,50 +51,37 @@ export async function POST(request: Request, context: Context) {
 }
 
 type InputRow = { rowNumber: number; data: Record<string, string> };
+type ParsedRows = {
+  projects: z.infer<typeof projectInput>[];
+  employees: z.infer<typeof employeeInput>[];
+  equipments: z.infer<typeof equipmentInput>[];
+  error: string;
+};
 
-function parseRows(kind: CatalogKind, rows: InputRow[]) {
-  const projects: z.infer<typeof projectInput>[] = [];
-  const employees: z.infer<typeof employeeInput>[] = [];
-  const equipments: z.infer<typeof equipmentInput>[] = [];
-  const seen = new Set<string>();
+function parseRows(kind: CatalogKind, rows: InputRow[]): ParsedRows {
+  const result: ParsedRows = { projects: [], employees: [], equipments: [], error: "" };
 
   for (const row of rows) {
-    const validation =
-      kind === "projects" ? projectInput.safeParse(row.data) :
-      kind === "employees" ? employeeInput.safeParse(row.data) :
-      equipmentInput.safeParse(row.data);
-
-    if (!validation.success) {
-      const issue = validation.error.issues[0];
-      const field = issue.path.length ? issue.path.join(".") + ": " : "";
-      return { projects, employees, equipments, error: "Excel row " + row.rowNumber + ": " + field + issue.message };
+    if (kind === "projects") {
+      const parsed = projectInput.safeParse(row.data);
+      if (!parsed.success) return rowError(result, row.rowNumber, parsed.error);
+      result.projects.push(parsed.data);
+    } else if (kind === "employees") {
+      const parsed = employeeInput.safeParse(row.data);
+      if (!parsed.success) return rowError(result, row.rowNumber, parsed.error);
+      result.employees.push(parsed.data);
+    } else {
+      const parsed = equipmentInput.safeParse(row.data);
+      if (!parsed.success) return rowError(result, row.rowNumber, parsed.error);
+      result.equipments.push(parsed.data);
     }
-
-    let identifier = "";
-    if (kind === "projects" && validation.data && "jobNo" in validation.data) {
-      if (!validation.data.jobNo) {
-        return { projects, employees, equipments, error: "Excel row " + row.rowNumber + ": Job No is required for imports." };
-      }
-      identifier = validation.data.jobNo.toLowerCase() + "::" + validation.data.rev.toLowerCase();
-      projects.push(validation.data);
-    } else if (kind === "employees" && validation.data && "employeeCode" in validation.data) {
-      if (!validation.data.employeeCode) {
-        return { projects, employees, equipments, error: "Excel row " + row.rowNumber + ": Employee ID is required for imports." };
-      }
-      identifier = validation.data.employeeCode.toLowerCase();
-      employees.push(validation.data);
-    } else if (kind === "equipments" && validation.data && "registrationNo" in validation.data) {
-      if (!validation.data.registrationNo) {
-        return { projects, employees, equipments, error: "Excel row " + row.rowNumber + ": Registration No is required for imports." };
-      }
-      identifier = validation.data.registrationNo.toLowerCase();
-      equipments.push(validation.data);
-    }
-
-    if (seen.has(identifier)) {
-      return { projects, employees, equipments, error: "Excel row " + row.rowNumber + ": duplicate identifier within this file." };
-    }
-    seen.add(identifier);
   }
-  return { projects, employees, equipments, error: "" };
+
+  return result;
+}
+
+function rowError(result: ParsedRows, rowNumber: number, error: z.ZodError): ParsedRows {
+  const issue = error.issues[0];
+  const field = issue.path.length ? issue.path.join(".") + ": " : "";
+  return { ...result, error: "Excel row " + rowNumber + ": " + field + issue.message };
 }

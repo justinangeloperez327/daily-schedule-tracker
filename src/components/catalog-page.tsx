@@ -108,7 +108,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   }
 
   async function remove(record: CatalogRow) {
-    const title = getValue(record, "name") || getValue(record, "vehicleDetails") || record.id;
+    const title = getValue(record, "name") || getValue(record, "vehicleDetails") || getValue(record, "employeeCode") || record.id;
     if (!window.confirm("Delete " + title + "? This cannot be undone.")) return;
     try {
       await apiRequest<{ success: true }>("/api/" + kind + "/" + encodeURIComponent(record.id), {
@@ -122,8 +122,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   }
 
   async function onImported(result: ImportResult) {
-    setNotice("Excel import complete: " + result.created + " added, " + result.skipped +
-      " skipped as duplicates (" + result.total + " rows).");
+    setNotice("Excel import complete: " + result.created + " of " + result.total + " rows added, including any duplicates.");
     try {
       await loadRecords();
     } catch (cause) {
@@ -192,8 +191,8 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                     <Button size="icon-sm" variant="ghost" aria-label={"Edit record " + record.id} onClick={() => edit(record)}>
                       <Pencil className="size-3.5" />
                     </Button>
-                    <Button size="icon-sm" variant="ghost" aria-label={"Delete record " + record.id} onClick={() => remove(record)}>
-                      <Trash2 className="size-3.5" />
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" aria-label={"Delete record " + record.id} onClick={() => remove(record)}>
+                      <Trash2 className="size-3.5" /> Delete
                     </Button>
                   </div>
                 </TableCell>

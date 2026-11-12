@@ -183,12 +183,7 @@ export function ImportExcelDialog({
                   </table>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Previewing up to 5 records. Duplicates already in the database are skipped, not overwritten.
-                  {kind === "projects"
-                    ? " Matching uses Job No + Rev."
-                    : kind === "employees"
-                    ? " Matching uses Employee ID."
-                    : " Matching uses Registration No."}
+                  Previewing up to 5 records. Every valid row will be added, even when it has the same identifiers or values as an existing record. Delete unwanted rows from the table afterward.
                 </p>
               </div>
             )}

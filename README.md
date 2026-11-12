@@ -73,7 +73,7 @@ No seeded demo records are created in the database. Set up projects, employees a
 
 ## Import Excel into Projects, Employees, and Equipments
 
-Each catalog page now has **Import Excel** and a **Download Excel template** option. Upload an `.xlsx`, inspect the first five rows in the preview, then select **Confirm import**. The table reloads and displays the number added and skipped.
+Each catalog page now has **Import Excel** and a **Download Excel template** option. Upload an `.xlsx`, inspect the first five rows in the preview, then select **Confirm import**. The table reloads and displays the number added.
 
 **Project columns:** So No, Job No, Rev, Client Name, Main Category, Sub Category, Project Name, Descriptions, Contract Value, Payment Terms, Status, Project In Charge.
 
@@ -83,13 +83,19 @@ Each catalog page now has **Import Excel** and a **Download Excel template** opt
 
 - Headers are matched case-insensitively and ignore punctuation/spaces. The Excel typo `Contract Vaue` is also recognized.
 - Import limit: 5 MB and 1,000 non-empty rows per `.xlsx` file.
-- Required values: Projects need Job No, Project Name, Client Name; Employees need Employee ID and Name; Equipments need Registration No and Vehicle Details. Optional fields may be empty.
+- Required values: Projects need Project Name and Client Name; Employees need Name; Equipments need Vehicle Details. Identifiers are optional and may be repeated.
 - Dates support Excel date cells, numeric date serials, `YYYY-MM-DD`, and day-first `DD/MM/YYYY`.
-- Duplicate imports **skip** existing records rather than overwrite them. Projects match by Job No + Rev; employees by Employee ID; equipment by Registration No.
+- **Duplicate rows and identifiers are accepted.** Every valid Excel row is inserted as a separate record. The final table column provides Edit and Delete actions for managing records individually. Scheduled items must be unassigned before deletion.
 - The new PostgreSQL migration preserves previous records and schedule assignments; employee `trade` is renamed to `designation`, and equipment `name`/`category` become `vehicleDetails`/`vehicleType`.
 - The fields Contract Value, Limit, and Model Year currently preserve Excel values as text, without assuming a currency or measurement unit.
 - Format identifiers as **text** in Excel to preserve leading zeroes (the downloadable templates are preformatted).
 
-Apply database schema changes after pulling new code: `npm run db:deploy`.
+Apply all database schema changes, including the migration that removes identifier uniqueness, after pulling new code: `npm run db:deploy`.
 
 **Security:** This is still an unauthenticated prototype. Do not publish it or import real employee/client information without adding authentication and access controls.
+
+## Deployment prerequisites (Vercel)
+
+Next.js and Prisma do not provision PostgreSQL automatically. Create a managed PostgreSQL database (for example, Neon through Vercel Marketplace), connect it to the Vercel project, and configure `DATABASE_URL` for the deployment. If your provider exposes a direct, unpooled connection, configure `DIRECT_URL` for migrations.
+
+Run `npm run db:deploy` against that database **before** using the app; this is a separate controlled step from the Next.js build. Automatic Vercel deployments are disabled in `vercel.json`. Never commit credentials or put them in `NEXT_PUBLIC_*` variables.
