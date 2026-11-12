@@ -57,20 +57,30 @@ export function ScheduleTracker() {
 
   React.useEffect(() => {
     const today = dateKey(new Date());
-    setSelectedDate(today);
+    let initialEntries = demoEntries(today);
+
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved !== null) {
         const parsed: unknown = JSON.parse(saved);
-        setEntries(Array.isArray(parsed) ? parsed.filter(isScheduleEntry) : []);
-      } else {
-        setEntries(demoEntries(today));
+        initialEntries = Array.isArray(parsed) ? parsed.filter(isScheduleEntry) : [];
       }
     } catch {
       // Private browsing or corrupt storage should not prevent the UI from loading.
-      setEntries(demoEntries(today));
     }
-    setHydrated(true);
+
+    // Defer hydration to avoid synchronously updating React state in an effect.
+    let mounted = true;
+    queueMicrotask(() => {
+      if (!mounted) return;
+      setSelectedDate(today);
+      setEntries(initialEntries);
+      setHydrated(true);
+    });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   React.useEffect(() => {
