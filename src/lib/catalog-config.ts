@@ -26,7 +26,7 @@ export const catalogConfigs: Record<
       { key: "subCategory", label: "Sub Category" },
       { key: "name", label: "Project Name", required: true },
       { key: "descriptions", label: "Descriptions" },
-      { key: "contractValue", label: "Contract Vaue" },
+      { key: "contractValue", label: "Contract Value" },
       { key: "paymentTerms", label: "Payment Terms" },
       { key: "status", label: "Status" },
       { key: "projectInCharge", label: "Project In Charge" },
