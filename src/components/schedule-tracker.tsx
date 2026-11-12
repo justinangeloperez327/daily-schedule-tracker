@@ -291,11 +291,11 @@ export function ScheduleTracker() {
         </div>
       </div>
 
-      {(loadError || catalogError || exportError) && (
+      {Array.from(new Set([loadError, catalogError, exportError].filter(Boolean))).length > 0 && (
         <div role="alert" className="mb-4 space-y-1 text-sm text-destructive">
-          {loadError && <p>{loadError}</p>}
-          {catalogError && <p>{catalogError}</p>}
-          {exportError && <p>{exportError}</p>}
+          {Array.from(new Set([loadError, catalogError, exportError].filter(Boolean))).map((message) => (
+            <p key={message}>{message}</p>
+          ))}
         </div>
       )}
 
