@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Download,
   Pencil,
   Plus,
   Search,
@@ -54,6 +55,8 @@ export function ScheduleTracker() {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<ScheduleDraft>(blankDraft(""));
   const [formError, setFormError] = React.useState("");
+  const [exporting, setExporting] = React.useState(false);
+  const [exportError, setExportError] = React.useState("");
 
   React.useEffect(() => {
     const today = dateKey(new Date());
@@ -112,6 +115,27 @@ export function ScheduleTracker() {
 
   const dayTotal = entries.filter((entry) => entry.date === selectedDate).length;
   const hasSamples = entries.some((entry) => entry.isSample);
+
+  async function handleExport() {
+    if (!selectedDate || exporting) return;
+
+    // Export all jobs for this date, even if the search box is filtering the table.
+    const dayEntries = entries.filter((entry) => entry.date === selectedDate);
+    if (dayEntries.length === 0) return;
+
+    setExporting(true);
+    setExportError("");
+    try {
+      // ExcelJS is loaded only when the user requests an Excel export.
+      const { exportScheduleToExcel } = await import("@/lib/export-schedule");
+      await exportScheduleToExcel(selectedDate, dayEntries);
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      setExportError("Unable to create the Excel file. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function openNew() {
     setEditingId(null);
@@ -219,11 +243,30 @@ export function ScheduleTracker() {
               A clear view of scheduled jobs, labour, equipment, and site activities.
             </p>
           </div>
-          <Button onClick={openNew} disabled={!hydrated} className="h-10 px-4">
-            <Plus className="size-4" />
-            Add Schedule
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-10 px-4"
+              onClick={handleExport}
+              disabled={!hydrated || !selectedDate || dayTotal === 0 || exporting}
+              title="Export all jobs for the selected date to Excel"
+              aria-label="Export selected day's schedule to Excel"
+            >
+              <Download className="size-4" />
+              {exporting ? "Exporting..." : "Export to Excel"}
+            </Button>
+            <Button onClick={openNew} disabled={!hydrated} className="h-10 px-4">
+              <Plus className="size-4" />
+              Add Schedule
+            </Button>
+          </div>
         </div>
+
+        {exportError && (
+          <p role="alert" className="mb-4 text-sm text-destructive">
+            {exportError}
+          </p>
+        )}
 
         <section className="rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-5 sm:px-6">
