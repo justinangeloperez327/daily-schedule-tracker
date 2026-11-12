@@ -83,7 +83,7 @@ Each catalog page now has **Import Excel** and a **Download Excel template** opt
 
 - Headers are matched case-insensitively and ignore punctuation/spaces. The Excel typo `Contract Vaue` is also recognized.
 - Import limit: 5 MB and 1,000 non-empty rows per `.xlsx` file.
-- Required values: Projects need Project Name and Client Name; Employees need Name; Equipments need Vehicle Details. Identifiers are optional and may be repeated.
+- **Incomplete Excel rows are allowed:** blank Project Name, Client Name, Employee Name, or Vehicle Details are imported as empty values and shown as a dash in the table. Empty rows are ignored. Preview shows a warning with the number of incomplete rows. Use the row's Edit or Delete action for cleanup. New records added manually still require the key fields.
 - Dates support Excel date cells, numeric date serials, `YYYY-MM-DD`, and day-first `DD/MM/YYYY`.
 - **Duplicate rows and identifiers are accepted.** Every valid Excel row is inserted as a separate record. The final table column provides Edit and Delete actions for managing records individually. Scheduled items must be unassigned before deletion.
 - The new PostgreSQL migration preserves previous records and schedule assignments; employee `trade` is renamed to `designation`, and equipment `name`/`category` become `vehicleDetails`/`vehicleType`.

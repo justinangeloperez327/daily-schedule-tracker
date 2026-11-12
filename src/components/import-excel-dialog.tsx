@@ -30,6 +30,9 @@ export function ImportExcelDialog({
   const [templateLoading, setTemplateLoading] = React.useState(false);
   const config = catalogConfigs[kind];
   const identity = config.identity;
+  const incompleteRows = preview?.rows.filter((row) =>
+    config.fields.some((field) => field.required && !row.data[field.key]?.trim())
+  ).length ?? 0;
 
   function reset() {
     setFile(null);
@@ -182,8 +185,14 @@ export function ImportExcelDialog({
                     </tbody>
                   </table>
                 </div>
+                {incompleteRows > 0 && (
+                  <p role="status" className="text-xs text-amber-700">
+                    {incompleteRows} {incompleteRows === 1 ? "row has" : "rows have"} missing name or other required details.
+                    These rows will still be imported with empty values. Use Edit or Delete afterward to manage them.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  Previewing up to 5 records. Every valid row will be added, even when it has the same identifiers or values as an existing record. Delete unwanted rows from the table afterward.
+                  Previewing up to 5 records. Duplicate and incomplete records are permitted. Rows with no values at all are ignored.
                 </p>
               </div>
             )}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { apiError, parseJson } from "@/lib/api-response";
-import { employeeInput, equipmentInput, projectInput } from "@/lib/validation";
+import { employeeImportInput, equipmentImportInput, projectImportInput } from "@/lib/validation";
 import type { CatalogKind } from "@/lib/catalog";
 
 export const runtime = "nodejs";
@@ -43,7 +43,7 @@ export async function POST(request: Request, context: Context) {
       created,
       skipped: 0,
       total: batch.rows.length,
-      message: "All valid rows were imported, including duplicate records.",
+      message: "All valid rows were imported, including duplicates and incomplete records.",
     });
   } catch (error) {
     return apiError(error);
@@ -52,9 +52,9 @@ export async function POST(request: Request, context: Context) {
 
 type InputRow = { rowNumber: number; data: Record<string, string> };
 type ParsedRows = {
-  projects: z.infer<typeof projectInput>[];
-  employees: z.infer<typeof employeeInput>[];
-  equipments: z.infer<typeof equipmentInput>[];
+  projects: z.infer<typeof projectImportInput>[];
+  employees: z.infer<typeof employeeImportInput>[];
+  equipments: z.infer<typeof equipmentImportInput>[];
   error: string;
 };
 
@@ -63,15 +63,15 @@ function parseRows(kind: CatalogKind, rows: InputRow[]): ParsedRows {
 
   for (const row of rows) {
     if (kind === "projects") {
-      const parsed = projectInput.safeParse(row.data);
+      const parsed = projectImportInput.safeParse(row.data);
       if (!parsed.success) return rowError(result, row.rowNumber, parsed.error);
       result.projects.push(parsed.data);
     } else if (kind === "employees") {
-      const parsed = employeeInput.safeParse(row.data);
+      const parsed = employeeImportInput.safeParse(row.data);
       if (!parsed.success) return rowError(result, row.rowNumber, parsed.error);
       result.employees.push(parsed.data);
     } else {
-      const parsed = equipmentInput.safeParse(row.data);
+      const parsed = equipmentImportInput.safeParse(row.data);
       if (!parsed.success) return rowError(result, row.rowNumber, parsed.error);
       result.equipments.push(parsed.data);
     }

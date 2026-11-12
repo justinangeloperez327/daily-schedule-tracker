@@ -48,6 +48,22 @@ export const equipmentInput = z.object({
   remarks: notesText,
 }).strict();
 
+// Excel imports are intentionally lenient: an incomplete spreadsheet row is
+// kept as a record so it can be reviewed, edited or deleted later.
+// Manual add/edit operations still require names and core descriptions.
+export const projectImportInput = projectInput.extend({
+  clientName: optionalText,
+  name: optionalText,
+});
+
+export const employeeImportInput = employeeInput.extend({
+  name: optionalText,
+});
+
+export const equipmentImportInput = equipmentInput.extend({
+  vehicleDetails: optionalText,
+});
+
 export const scheduleInput = z.object({
   date,
   jobNo: requiredText,
