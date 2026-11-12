@@ -1,27 +1,72 @@
 # Daily Schedule Tracker
 
-A lightweight daily work schedule tracker built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui.
+A minimal daily site work planner built with **Next.js 16**, **TypeScript**, **Tailwind CSS**, **shadcn/ui**, **Prisma ORM 7**, and **PostgreSQL**.
 
-The first version provides a date-based schedule table for job number, project name, client name, labour, equipment, time in/out, and scope of work. No sidebar and no backend in this phase.
+## Pages
 
-## Start
+- **Schedules** — create, edit, delete, search and export jobs by date; assign a project, employees and equipment
+- **Projects** — project name and client name
+- **Employees** — employee name and trade/position
+- **Equipments** — equipment name and category/type
 
-```bash
-npm install
-npm run dev
-```
+The layout uses **top navigation only**, without a sidebar.
 
-Open http://localhost:3000.
+## Database and local development
 
-## Notes
+Requires Node.js 24 and a running PostgreSQL database.
 
-- Uses local browser storage for add, edit, and delete.
-- Includes clearly labeled sample entries on first launch.
-- Data is local to the browser and is not shared between users or devices.
-- Requires Node.js 24.
+1. Create a PostgreSQL database named `daily_schedule_tracker` (or choose your own name).
+2. Copy the environment template: `cp .env.example .env` (on Windows PowerShell: `Copy-Item .env.example .env`).
+3. Set `DATABASE_URL` to your PostgreSQL connection URI in `.env`. For hosted PostgreSQL, optionally use `DIRECT_URL` for migrations when your runtime URL uses pooling.
+4. Install and generate the Prisma Client:
+
+   ```bash
+   npm install
+   npm run db:generate
+   ```
+
+5. Apply the committed database migration:
+
+   ```bash
+   npm run db:deploy
+   ```
+
+6. Start the site:
+
+   ```bash
+   npm run dev
+   ```
+
+Open **http://localhost:3000**. The homepage redirects to **/schedules**.
+
+For development of future schema changes, run `npm run db:migrate -- --name <migration-name>`, review the generated SQL, and commit the migration. For production use `npm run db:deploy`, never `db push` against existing records.
+
+## Prisma models
+
+- **Project** — one project can have many schedules
+- **Employee** — assigned to schedules through `ScheduleEmployee` (many-to-many)
+- **Equipment** — assigned through `ScheduleEquipment` (many-to-many)
+- **Schedule** — date, job number, project, assigned employees/equipment, time in/out, scope
+
+Daily schedule dates and times are stored as site-local `YYYY-MM-DD` and `HH:mm` strings, so rendering a schedule does not shift dates across timezones.
+
+Deleting a project, employee, or equipment that is assigned to a schedule is blocked to protect records. Remove the assignment first. Deleting a schedule removes its assignment rows.
 
 ## Export to Excel
 
-Select a date and click **Export to Excel** at the top of the schedule. The app downloads a formatted `.xlsx` workbook containing all jobs for that date, using the seven schedule columns. Search filters do not limit exports. The button is disabled when there are no jobs scheduled for the selected date.
+Select a schedule date and click **Export to Excel**. The browser downloads a formatted `.xlsx` with the day's seven schedule columns, date, total jobs, readable widths, frozen header, and filters. Export includes all jobs for the date regardless of search filtering.
 
-The generated workbook includes a schedule title, date, job count, readable column widths, alternating row shading, a frozen header, and Excel column filters. The export is generated in your browser from local schedule data and does not require a server.
+## Hosting
+
+- Provision your own PostgreSQL database and set `DATABASE_URL` in the hosting environment (and `DIRECT_URL` if needed for migrations). No credentials should be committed to Git.
+- Run migrations as a controlled release step: `npm run db:deploy`.
+- **Automatic Vercel Git deployments are disabled** by `vercel.json`. Deploy intentionally using `vercel --prod`.
+- GitHub Actions checks types, linting and build without connecting to a database.
+
+## Current limitations
+
+This is an **unauthenticated prototype**. Do **not** expose the app publicly or use live personnel/project data until access control and authentication are added. The API currently accepts writes from any caller who can reach it.
+
+**Migration note:** The earlier prototype stored schedules only in the browser's `localStorage`. Those entries are **not automatically imported** into PostgreSQL. The new version leaves the old browser data untouched; existing entries must be transferred separately if needed.
+
+No seeded demo records are created in the database. Set up projects, employees and equipments before scheduling.

@@ -1,5 +1,5 @@
-import { ScheduleTracker } from "@/components/schedule-tracker";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <ScheduleTracker />;
+  redirect("/schedules");
 }
