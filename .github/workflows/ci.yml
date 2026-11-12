@@ -8,6 +8,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: daily_schedule_tracker
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d daily_schedule_tracker"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/daily_schedule_tracker?schema=public
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -17,8 +33,13 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Install dependencies
+      - name: Install dependencies and generate Prisma Client
         run: npm install --no-audit --no-fund
+
+      - name: Apply and validate Prisma migrations
+        run: |
+          npm run db:deploy
+          npx prisma migrate status
 
       - name: Type-check
         run: npm run typecheck
