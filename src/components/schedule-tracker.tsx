@@ -65,7 +65,7 @@ export function ScheduleTracker() {
             Manage daily work plans and dispatch teams in one register.
           </p>
         </div>
-        <Button asChild={false} className="h-10 px-4">
+        <Button asChild className="h-10 px-4">
           <Link href="/schedules/new"><Plus className="size-4" /> Create Schedule</Link>
         </Button>
       </div>
@@ -132,7 +132,7 @@ export function ScheduleTracker() {
                 </TableCell>
                 <TableCell className="pr-5">
                   <div className="flex justify-end gap-1">
-                    <Button variant="outline" size="sm" asChild={false}>
+                    <Button variant="outline" size="sm" asChild>
                       <Link href={"/schedules/" + sheet.id}><ExternalLink className="size-3.5" /> Open</Link>
                     </Button>
                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
@@ -154,7 +154,7 @@ export function ScheduleTracker() {
                       {loading ? "Retrieving schedule records." : (dateFilter || search) ? "Try another date or clear the filters." : "Create the first daily schedule to get started."}
                     </p>
                     {!loading && !dateFilter && !search && (
-                      <Button variant="outline" size="sm" className="mt-2" asChild={false}>
+                      <Button variant="outline" size="sm" className="mt-2" asChild>
                         <Link href="/schedules/new"><Plus /> Create Schedule</Link>
                       </Button>
                     )}

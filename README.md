@@ -124,3 +124,22 @@ Vercel's build command (set in `vercel.json`) runs `npm run vercel-build`, which
 - Database changes are **not rolled back** by reversing a Vercel deployment. Review migrations before releasing, back up important data, and keep the production database separate from preview deployments.
 - `npm run build` remains a regular Next.js-only local build. GitHub CI uses `npm run vercel-build` against a temporary PostgreSQL database to test this deployment sequence without touching production.
 - The older manually triggered GitHub migration workflow remains available as an emergency/manual fallback, but is not required for normal deployments.
+
+## Schedules: list + daily dispatch table
+
+The Schedules page is now a **register of schedule sheets** with date, unique job count, team dispatch count, day/night breakdown and actions. The upper-right **Create Schedule** button opens a full-page dispatch editor.
+
+Each schedule contains one or more **team dispatch rows**:
+
+- **Select Job**: choose an existing record from Projects (multiple dispatch rows may use the same job)
+- **Foremen**: select any number of employees for the foreman role
+- **Labours**: select any number of employees for the labour role
+- **Equipment**: optional multi-selection, retained from the prior scheduler
+- **Day / Night**: shift per dispatch row
+- **Scope**: Bus Shelter, Substation, Guardrail, Wire Rope, Gantry, Camera Cladding, To Be Followed, or a custom scope
+- **Time**: three vertically stacked time inputs — Camp start, Start time, End time
+- **Action**: delete a dispatch row (saved when the schedule is saved)
+
+The editor supports adding multiple rows, editing existing sheets, exporting an Excel dispatch table, and deleting a schedule from the register. Jobs counts represent *distinct selected projects*; team dispatches count the rows. The editor permits overnight shifts where End time is earlier than Start time.
+
+Migration `20261116000000_schedule_dispatch_sheets` groups existing schedule jobs into one sheet per date without dropping their employee/equipment assignments or existing row identifiers; previous free-text scopes remain editable as custom values. A new `ScheduleForeman` join records foreman assignments separately from labour assignments. No automatic conversion of existing labour assignments to foremen is attempted. The migration is applied on the next manual Vercel build using the existing `vercel-build` command; verify `DATABASE_URL` / `DIRECT_URL` first.
