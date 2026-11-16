@@ -39,6 +39,7 @@ model Employee {
   joiningDate String             @default("")
   remarks     String             @default("") @db.Text
   assignments ScheduleEmployee[]
+  foremanAssignments ScheduleForeman[]
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -62,7 +63,23 @@ model Equipment {
   @@index([registrationNo])
 }
 
+model ScheduleSheet {
+  id          String      @id @default(cuid())
+  date        String
+  dispatches  Schedule[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([date])
+}
+
 model Schedule {
+  sheetId    String
+  sheet      ScheduleSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  sortOrder  Int                 @default(0)
+  shift      String              @default("Day")
+  campStart  String              @default("")
+  foremen    ScheduleForeman[]
   id         String              @id @default(cuid())
   date       String              // YYYY-MM-DD; site-local calendar date
   jobNo      String
@@ -77,6 +94,7 @@ model Schedule {
   updatedAt  DateTime            @updatedAt
 
   @@index([date, timeIn])
+  @@index([sheetId, sortOrder])
   @@index([projectId])
 }
 
@@ -98,4 +116,14 @@ model ScheduleEquipment {
 
   @@id([scheduleId, equipmentId])
   @@index([equipmentId])
+}
+
+model ScheduleForeman {
+  scheduleId String
+  employeeId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@id([scheduleId, employeeId])
+  @@index([employeeId])
 }

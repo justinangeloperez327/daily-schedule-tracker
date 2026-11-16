@@ -80,3 +80,32 @@ export const scheduleInput = z.object({
   message: "Duplicate equipment is not allowed.",
   path: ["equipmentIds"],
 });
+
+export const dispatchRowInput = z.object({
+  id: z.string().min(1).max(200).optional(),
+  projectId: z.string().min(1).max(200),
+  foremanIds: z.array(z.string().min(1).max(200)).max(60),
+  employeeIds: z.array(z.string().min(1).max(200)).max(150),
+  shift: z.enum(["Day", "Night"]),
+  scope: z.string().trim().min(1).max(200),
+  campStart: time,
+  timeIn: time,
+  timeOut: time,
+}).strict().superRefine((entry, context) => {
+  if (new Set(entry.foremanIds).size !== entry.foremanIds.length) {
+    context.addIssue({ code: "custom", path: ["foremanIds"], message: "Duplicate foremen within a dispatch are not allowed." });
+  }
+  if (new Set(entry.employeeIds).size !== entry.employeeIds.length) {
+    context.addIssue({ code: "custom", path: ["employeeIds"], message: "Duplicate labourers within a dispatch are not allowed." });
+  }
+});
+
+export const scheduleSheetInput = z.object({
+  date,
+  dispatches: z.array(dispatchRowInput).min(1).max(100),
+}).strict().superRefine((sheet, context) => {
+  const ids = sheet.dispatches.flatMap((entry) => entry.id ? [entry.id] : []);
+  if (new Set(ids).size !== ids.length) {
+    context.addIssue({ code: "custom", path: ["dispatches"], message: "Duplicate dispatch row identifiers." });
+  }
+});
