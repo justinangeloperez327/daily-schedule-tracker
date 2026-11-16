@@ -36,6 +36,7 @@ export async function POST(request: Request) {
             timeOut: entry.timeOut,
             employees: { create: entry.employeeIds.map((id) => ({ employee: { connect: { id } } })) },
             foremen: { create: entry.foremanIds.map((id) => ({ employee: { connect: { id } } })) },
+            equipments: { create: entry.equipmentIds.map((id) => ({ equipment: { connect: { id } } })) },
           })),
         },
       },

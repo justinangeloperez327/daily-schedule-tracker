@@ -58,7 +58,10 @@ export async function PUT(request: Request, context: Context) {
                 deleteMany: {},
                 create: entry.foremanIds.map((employeeId) => ({ employeeId })),
               },
-              // Equipment assignments are deliberately left untouched.
+              equipments: {
+                deleteMany: {},
+                create: entry.equipmentIds.map((equipmentId) => ({ equipmentId })),
+              },
             },
           });
         } else {
@@ -69,6 +72,7 @@ export async function PUT(request: Request, context: Context) {
               jobNo: "",
               employees: { create: entry.employeeIds.map((employeeId) => ({ employeeId })) },
               foremen: { create: entry.foremanIds.map((employeeId) => ({ employeeId })) },
+              equipments: { create: entry.equipmentIds.map((equipmentId) => ({ equipmentId })) },
             },
           });
         }

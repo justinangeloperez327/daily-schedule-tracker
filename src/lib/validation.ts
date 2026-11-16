@@ -86,6 +86,7 @@ export const dispatchRowInput = z.object({
   projectId: z.string().min(1).max(200),
   foremanIds: z.array(z.string().min(1).max(200)).max(60),
   employeeIds: z.array(z.string().min(1).max(200)).max(150),
+  equipmentIds: z.array(z.string().min(1).max(200)).max(100).default([]),
   shift: z.enum(["Day", "Night"]),
   scope: z.string().trim().min(1).max(200),
   campStart: time,
@@ -97,6 +98,9 @@ export const dispatchRowInput = z.object({
   }
   if (new Set(entry.employeeIds).size !== entry.employeeIds.length) {
     context.addIssue({ code: "custom", path: ["employeeIds"], message: "Duplicate labourers within a dispatch are not allowed." });
+  }
+  if (new Set(entry.equipmentIds).size !== entry.equipmentIds.length) {
+    context.addIssue({ code: "custom", path: ["equipmentIds"], message: "Duplicate equipment within a dispatch is not allowed." });
   }
 });
 

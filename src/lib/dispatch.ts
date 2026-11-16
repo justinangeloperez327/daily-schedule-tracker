@@ -5,6 +5,7 @@ export type DispatchEntry = {
   projectId: string;
   foremanIds: string[];
   employeeIds: string[];
+  equipmentIds: string[];
   shift: DispatchShift;
   scope: string;
   campStart: string;
@@ -20,7 +21,6 @@ export type DispatchSheet = {
     jobNo: string;
     projectName: string;
     clientName: string;
-    equipmentIds: string[];
   }>;
 };
 
@@ -39,6 +39,7 @@ export function emptyDispatch(): DispatchEntry {
     projectId: "",
     foremanIds: [],
     employeeIds: [],
+    equipmentIds: [],
     shift: "Day",
     scope: "",
     campStart: "06:00",
