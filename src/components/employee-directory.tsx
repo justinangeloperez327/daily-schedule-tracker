@@ -342,7 +342,7 @@ export function EmployeeDirectory() {
           )}
         </div>
 
-        <Table className="w-full min-w-[1000px] table-fixed">
+        <Table className="w-full min-w-[1340px] table-fixed">
           <colgroup>
             {displayedColumns.map((column) => (
               <col key={column.key} style={column.width ? { width: column.width } : undefined} />
