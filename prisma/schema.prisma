@@ -39,6 +39,7 @@ model Employee {
   location           String       @default("")
   category           String       @default("")
   joiningDate        String       @default("")
+  status             String       @default("Not set")
   remarks            String       @default("") @db.Text
   labourAssignments  JobLabour[]
   foremanAssignments JobForeman[]
@@ -47,6 +48,7 @@ model Employee {
 
   @@index([name])
   @@index([employeeCode])
+  @@index([status])
 }
 
 model Equipment {

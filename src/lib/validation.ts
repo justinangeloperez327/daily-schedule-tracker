@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { employeeStatuses } from "@/lib/employee-status";
+
+const employeeStatus = z.enum(employeeStatuses);
 
 const requiredText = z.string().trim().min(1).max(200);
 const optionalText = z.string().trim().max(200).default("");
@@ -36,6 +39,7 @@ export const employeeInput = z.object({
   location: optionalText,
   category: optionalText,
   joiningDate: optionalDate,
+  status: employeeStatus.default("Active"),
   remarks: notesText,
 }).strict();
 
@@ -58,6 +62,9 @@ export const projectImportInput = projectInput.extend({
 
 export const employeeImportInput = employeeInput.extend({
   name: optionalText,
+  // Older Excel files have no Status header; never infer employment status
+  // unless an unambiguous status is explicitly supplied.
+  status: z.preprocess((value) => !value ? "Not set" : value, employeeStatus),
 });
 
 export const equipmentImportInput = equipmentInput.extend({

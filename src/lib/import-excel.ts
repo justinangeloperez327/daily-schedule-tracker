@@ -1,6 +1,7 @@
 import type ExcelJS from "exceljs";
 import type { CatalogKind } from "@/lib/catalog";
 import { catalogConfigs } from "@/lib/catalog-config";
+import { normalizeEmployeeStatus } from "@/lib/employee-status";
 
 export type ImportRow = { rowNumber: number; data: Record<string, string> };
 export type ParsedExcel = { sheetName: string; rows: ImportRow[]; headers: string[] };
@@ -65,6 +66,9 @@ export async function parseCatalogExcel(file: File, kind: CatalogKind): Promise<
   await workbook.xlsx.load(data as unknown as Parameters<typeof workbook.xlsx.load>[0]);
 
   const fields = catalogConfigs[kind].fields;
+  // Optional employee Status/Remarks columns must not invalidate legacy .xlsx
+  // files containing only the original six/seven employee fields.
+  const requiredFields = fields.filter((field) => !field.importOptional);
   const mapAliases = new Map<string, string>();
   for (const field of fields) {
     for (const heading of [field.label, ...(headerAliases[field.key] ?? [])]) {
@@ -87,18 +91,21 @@ export async function parseCatalogExcel(file: File, kind: CatalogKind): Promise<
       });
 
       if (found.size > best.size) best = found;
-      if (found.size === fields.length) {
-        selected = sheet;
-        headerRow = rowNumber;
-        indexes = found;
-        break;
+      if (requiredFields.every((field) => found.has(field.key))) {
+        // Prefer a complete new workbook; but accept old employee sheets too.
+        if (!selected || found.size > indexes.size) {
+          selected = sheet;
+          headerRow = rowNumber;
+          indexes = found;
+        }
+        if (found.size === fields.length) break;
       }
     }
-    if (selected) break;
+    if (selected && indexes.size === fields.length) break;
   }
 
   if (!selected) {
-    const missing = fields.filter((field) => !best.has(field.key)).map((field) => field.label);
+    const missing = requiredFields.filter((field) => !best.has(field.key)).map((field) => field.label);
     throw new Error("Missing Excel column headers: " + missing.join(", ") + ". Download the template for the expected format.");
   }
 
@@ -110,6 +117,14 @@ export async function parseCatalogExcel(file: File, kind: CatalogKind): Promise<
       const index = indexes.get(field.key);
       const value = index === undefined ? null : worksheetRow.getCell(index).value;
       record[field.key] = field.key === "joiningDate" ? normalizeJoiningDate(value) : extractValue(value);
+    }
+    if (kind === "employees") {
+      const supplied = record.status;
+      // Preserve Remarks (including legacy "Active") in full.
+      // Only backfill when a value matches a recognized status exactly.
+      const derived = supplied ? normalizeEmployeeStatus(supplied)
+        : normalizeEmployeeStatus(record.remarks);
+      record.status = derived ?? supplied ?? "";
     }
     if (Object.values(record).every((value) => value === "")) continue;
     rows.push({ rowNumber, data: record });

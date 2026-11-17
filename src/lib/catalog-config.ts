@@ -6,6 +6,7 @@ export type CatalogField = {
   placeholder?: string;
   required?: boolean;
   type?: "date" | "text";
+  importOptional?: boolean;
 };
 
 export const catalogConfigs: Record<
@@ -44,7 +45,8 @@ export const catalogConfigs: Record<
       { key: "location", label: "Location" },
       { key: "category", label: "Category" },
       { key: "joiningDate", label: "Joining Date", type: "date" },
-      { key: "remarks", label: "Remarks" },
+      { key: "status", label: "Status", importOptional: true },
+      { key: "remarks", label: "Remarks", importOptional: true },
     ],
   },
   equipments: {

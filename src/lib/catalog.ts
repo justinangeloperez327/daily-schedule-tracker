@@ -24,6 +24,7 @@ export type Employee = {
   location: string;
   category: string;
   joiningDate: string;
+  status: string;
   remarks: string;
 };
 
