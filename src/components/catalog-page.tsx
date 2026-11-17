@@ -172,12 +172,14 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
             <TableRow>
               {config.fields.map((field) => (
                 <TableHead key={field.key} className={
-                  ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
-                    ? "min-w-[220px] px-4 py-3"
-                    : "min-w-[116px] px-4 py-3"
+                  kind === "employees"
+                    ? "h-10 min-w-[125px] px-3 py-2 leading-4"
+                    : ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
+                      ? "min-w-[220px] px-4 py-3"
+                      : "min-w-[116px] px-4 py-3"
                 }>{field.label}</TableHead>
               ))}
-              <TableHead className="min-w-[144px] pr-5 text-right">Actions</TableHead>
+              <TableHead className={kind === "employees" ? "h-10 min-w-[120px] px-3 py-2 text-right" : "min-w-[144px] pr-5 text-right"}>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -186,14 +188,19 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                 {config.fields.map((field) => (
                   <TableCell
                     key={field.key}
-                    className="min-w-[116px] max-w-[360px] px-4 py-4 whitespace-normal break-words [overflow-wrap:anywhere] text-[#545b64]"
+                    className={kind === "employees"
+                      ? "min-w-[125px] max-w-[320px] px-3 py-1 align-middle text-sm leading-5 text-[#545b64]"
+                      : "min-w-[116px] max-w-[360px] px-4 py-4 whitespace-normal break-words [overflow-wrap:anywhere] text-[#545b64]"
+                    }
                     title={getValue(record, field.key)}
                   >
-                    {getValue(record, field.key) || "—"}
+                    {kind === "employees"
+                      ? <span className="block max-w-full truncate">{getValue(record, field.key) || "—"}</span>
+                      : getValue(record, field.key) || "—"}
                   </TableCell>
                 ))}
-                <TableCell className="pr-5">
-                  <div className="flex flex-wrap justify-end gap-2">
+                <TableCell className={kind === "employees" ? "px-3 py-1 align-middle" : "pr-5"}>
+                  <div className={kind === "employees" ? "flex flex-nowrap justify-end gap-1" : "flex flex-wrap justify-end gap-2"}>
                     <Button size="icon-sm" variant="ghost" aria-label={"Edit record " + record.id} onClick={() => edit(record)}>
                       <Pencil className="size-3.5" />
                     </Button>
