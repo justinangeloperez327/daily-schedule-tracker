@@ -163,21 +163,21 @@ export function ImportExcelDialog({
                     Choose another
                   </Button>
                 </div>
-                <div className="max-h-44 overflow-auto rounded-md border border-border">
-                  <table className="w-full text-left text-xs">
+                <div className="max-h-56 w-full overflow-auto rounded-md border border-border">
+                  <table className="w-full table-auto text-left text-xs">
                     <thead className="bg-muted">
                       <tr>
-                        <th className="px-3 py-2 font-semibold">Excel row</th>
+                        <th className="px-4 py-3 font-semibold">Excel row</th>
                         <th className="px-3 py-2 font-semibold">{config.fields.find((f) => f.key === identity)?.label}</th>
                         <th className="px-3 py-2 font-semibold">Description / Name</th>
                       </tr>
                     </thead>
                     <tbody>
                       {preview.rows.slice(0, 5).map((row) => (
-                        <tr key={row.rowNumber} className="border-t border-border">
-                          <td className="px-3 py-2">{row.rowNumber}</td>
+                        <tr key={row.rowNumber} className="border-t border-border transition-colors duration-150 hover:bg-[#EAF3FF]">
+                          <td className="px-4 py-3">{row.rowNumber}</td>
                           <td className="px-3 py-2">{row.data[identity] || "—"}</td>
-                          <td className="max-w-64 truncate px-3 py-2">
+                          <td className="min-w-40 max-w-80 whitespace-normal break-words [overflow-wrap:anywhere] px-4 py-3">
                             {row.data[kind === "projects" ? "name" : kind === "employees" ? "name" : "vehicleDetails"] || "—"}
                           </td>
                         </tr>

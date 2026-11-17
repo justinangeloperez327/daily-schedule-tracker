@@ -57,7 +57,7 @@ export function ScheduleTracker() {
   }
 
   return (
-    <main className="mx-auto max-w-[1500px] px-5 pb-16 pt-9 sm:px-8 lg:px-10 lg:pt-12">
+    <main className="w-full max-w-none px-4 pb-16 pt-9 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-5">
         <div>
           <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">Schedules</h1>
@@ -104,15 +104,15 @@ export function ScheduleTracker() {
           </div>
         </div>
 
-        <Table className="min-w-[800px]">
+        <Table className="min-w-[840px] table-fixed">
           <TableHeader className="bg-[#f8f9fa]">
             <TableRow>
-              <TableHead className="pl-6">Schedule date</TableHead>
-              <TableHead>Jobs</TableHead>
-              <TableHead>Team dispatches</TableHead>
-              <TableHead>Day / Night</TableHead>
-              <TableHead>Last updated</TableHead>
-              <TableHead className="pr-6 text-right">Actions</TableHead>
+              <TableHead className="w-[24%] pl-6">Schedule date</TableHead>
+              <TableHead className="w-[9%]">Jobs</TableHead>
+              <TableHead className="w-[15%]">Team dispatches</TableHead>
+              <TableHead className="w-[17%]">Day / Night</TableHead>
+              <TableHead className="w-[19%]">Last updated</TableHead>
+              <TableHead className="w-[16%] pr-6 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -124,14 +124,14 @@ export function ScheduleTracker() {
                     {dateLabel(sheet.date)}
                   </Link>
                 </TableCell>
-                <TableCell className="tabular-nums">{sheet.jobs}</TableCell>
-                <TableCell className="tabular-nums">{sheet.teamDispatches}</TableCell>
+                <TableCell className="tabular-nums font-medium">{sheet.jobs}</TableCell>
+                <TableCell className="tabular-nums font-medium">{sheet.teamDispatches}</TableCell>
                 <TableCell>{sheet.day} day / {sheet.night} night</TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {new Date(sheet.updatedAt).toLocaleString("en-AE", { dateStyle: "medium", timeStyle: "short" })}
                 </TableCell>
                 <TableCell className="pr-5">
-                  <div className="flex justify-end gap-1">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <Button variant="outline" size="sm" asChild>
                       <Link href={"/schedules/" + sheet.id}><ExternalLink className="size-3.5" /> Open</Link>
                     </Button>

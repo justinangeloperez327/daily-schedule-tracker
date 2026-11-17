@@ -143,3 +143,7 @@ Each schedule contains one or more **team dispatch rows**:
 The editor supports adding multiple rows, editing existing sheets, exporting an Excel dispatch table, and deleting a schedule from the register. Jobs counts represent *distinct selected projects*; team dispatches count the rows. The editor permits overnight shifts where End time is earlier than Start time.
 
 Migration `20261116000000_schedule_dispatch_sheets` groups existing schedule jobs into one sheet per date without dropping their employee/equipment assignments or existing row identifiers; previous free-text scopes remain editable as custom values. A new `ScheduleForeman` join records foreman assignments separately from labour assignments. No automatic conversion of existing labour assignments to foremen is attempted. The migration is applied on the next manual Vercel build using the existing `vercel-build` command; verify `DATABASE_URL` / `DIRECT_URL` first.
+
+## Full-width data tables and hover feedback
+
+All data tables (schedule register, dispatch editor, project/employee/equipment directories, and Excel import preview) use the available horizontal layout. Long content wraps instead of being truncated, and row padding is more comfortable. A light-blue hover/focus background highlights active rows without obscuring values. Wide tables retain horizontal scrolling on smaller screens and longer register layouts. This is a presentation-only change; no Prisma migration is required.

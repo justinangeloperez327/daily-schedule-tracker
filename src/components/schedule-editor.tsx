@@ -26,7 +26,7 @@ function SelectField({ label, value, onChange, children }: {
   label: string; value: string; onChange: (value: string) => void; children: React.ReactNode;
 }) {
   return <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}
-    className="h-9 w-full rounded-md border border-input bg-white px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30">
+    className="h-10 w-full min-w-0 rounded-md border border-input bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30">
     {children}
   </select>;
 }
@@ -110,7 +110,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       ? row.equipmentIds.map((id) => equipments.find((e) => e.id === id)?.vehicleDetails || "Equipment")
       : row[field].map((id) => employees.find((e) => e.id === id)?.name || "Employee");
     if (!items.length) return field === "foremanIds" ? "Select foremen" : field === "employeeIds" ? "Select labours" : "Select equipment";
-    return items.length === 1 ? items[0] : items[0] + " +" + (items.length - 1);
+    return items.join(", ");
   }
 
   async function save() {
@@ -150,7 +150,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   }
 
   return (
-    <main className="mx-auto max-w-[1750px] px-5 pb-16 pt-9 sm:px-8 lg:px-10">
+    <main className="w-full max-w-none px-4 pb-16 pt-9 sm:px-6 lg:px-8 2xl:px-10">
       <Link href="/schedules" className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" /> Back to schedules
       </Link>
@@ -197,18 +197,18 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           </Button>
         </div>
 
-        <Table className="min-w-[1450px]">
+        <Table className="min-w-[1620px] table-auto">
           <TableHeader className="bg-[#f8f9fa]">
             <TableRow>
               <TableHead className="w-[55px] pl-5">#</TableHead>
-              <TableHead className="min-w-[245px]">Select Job</TableHead>
-              <TableHead className="min-w-[165px]">Foremen</TableHead>
-              <TableHead className="min-w-[165px]">Labours</TableHead>
-              <TableHead className="min-w-[150px]">Equipment</TableHead>
-              <TableHead className="min-w-[110px]">Day / Night</TableHead>
-              <TableHead className="min-w-[180px]">Scope</TableHead>
-              <TableHead className="min-w-[185px]">Time</TableHead>
-              <TableHead className="w-[75px] pr-5 text-right">Action</TableHead>
+              <TableHead className="min-w-[275px]">Select Job</TableHead>
+              <TableHead className="min-w-[200px]">Foremen</TableHead>
+              <TableHead className="min-w-[210px]">Labours</TableHead>
+              <TableHead className="min-w-[190px]">Equipment</TableHead>
+              <TableHead className="min-w-[120px]">Day / Night</TableHead>
+              <TableHead className="min-w-[210px]">Scope</TableHead>
+              <TableHead className="min-w-[235px]">Time</TableHead>
+              <TableHead className="w-[85px] pr-5 text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -231,10 +231,10 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                     </p>}
                   </TableCell>
                   {(["foremanIds", "employeeIds", "equipmentIds"] as PickerField[]).map((field) => (
-                    <TableCell key={field} className="pt-4">
-                      <Button variant="outline" className="w-full justify-between px-2.5 font-normal"
+                    <TableCell key={field} className="min-w-[190px] py-4 align-top">
+                      <Button variant="outline" className="h-auto min-h-10 w-full items-start justify-between gap-2 whitespace-normal px-3 py-2 text-left font-normal"
                         onClick={() => openPicker(row, field)}>
-                        <span className="min-w-0 truncate text-xs">{chosenNames(row, field)}</span>
+                        <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenNames(row, field)}</span>
                         <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
                       </Button>
                       <p className="mt-1 text-[11px] text-muted-foreground">{row[field].length} selected</p>
@@ -264,10 +264,10 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       ["timeIn", "Start time"],
                       ["timeOut", "End time"],
                     ] as const).map(([field, label]) => (
-                      <div key={field} className="grid grid-cols-[68px_1fr] items-center gap-1.5">
+                      <div key={field} className="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-2">
                         <label className="text-[11px] text-muted-foreground" htmlFor={row.key + field}>{label}</label>
                         <Input id={row.key + field} type="time" value={row[field]}
-                          onChange={(event) => patch(row.key, field, event.target.value)} className="h-8 px-1.5 text-xs" />
+                          onChange={(event) => patch(row.key, field, event.target.value)} className="h-9 min-w-0 w-full px-2 text-xs" />
                       </div>
                     ))}
                   </TableCell>

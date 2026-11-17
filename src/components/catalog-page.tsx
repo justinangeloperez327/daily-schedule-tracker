@@ -131,7 +131,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   }
 
   return (
-    <main className="mx-auto max-w-[1500px] px-5 pb-16 pt-9 sm:px-8 lg:px-10 lg:pt-12">
+    <main className="w-full max-w-none px-4 pb-16 pt-9 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
       <div className="mb-8 flex flex-wrap items-start justify-between gap-5">
         <div>
           <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">
@@ -167,11 +167,17 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
             />
           </div>
         </div>
-        <Table className={kind === "projects" ? "min-w-[1850px]" : "min-w-[1080px]"}>
+        <Table className={kind === "projects" ? "min-w-[1840px] table-auto" : kind === "employees" ? "min-w-[1050px] table-auto" : "min-w-[960px] table-auto"}>
           <TableHeader className="bg-[#f8f9fa]">
             <TableRow>
-              {config.fields.map((field) => <TableHead key={field.key} className="px-5">{field.label}</TableHead>)}
-              <TableHead className="w-24 pr-5 text-right">Actions</TableHead>
+              {config.fields.map((field) => (
+                <TableHead key={field.key} className={
+                  ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
+                    ? "min-w-[220px] px-4 py-3"
+                    : "min-w-[116px] px-4 py-3"
+                }>{field.label}</TableHead>
+              ))}
+              <TableHead className="min-w-[144px] pr-5 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,14 +186,14 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                 {config.fields.map((field) => (
                   <TableCell
                     key={field.key}
-                    className="max-w-[280px] truncate px-5 text-[#545b64]"
+                    className="min-w-[116px] max-w-[360px] px-4 py-4 whitespace-normal break-words [overflow-wrap:anywhere] text-[#545b64]"
                     title={getValue(record, field.key)}
                   >
                     {getValue(record, field.key) || "—"}
                   </TableCell>
                 ))}
                 <TableCell className="pr-5">
-                  <div className="flex justify-end gap-1">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <Button size="icon-sm" variant="ghost" aria-label={"Edit record " + record.id} onClick={() => edit(record)}>
                       <Pencil className="size-3.5" />
                     </Button>
