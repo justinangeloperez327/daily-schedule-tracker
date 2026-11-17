@@ -1,5 +1,5 @@
-import { CatalogPage } from "@/components/catalog-page";
+import { EmployeeDirectory } from "@/components/employee-directory";
 
 export default function EmployeesPage() {
-  return <CatalogPage kind="employees" />;
+  return <EmployeeDirectory />;
 }
