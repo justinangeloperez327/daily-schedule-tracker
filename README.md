@@ -173,3 +173,19 @@ The GitHub CI workflow runs a rollback-only PostgreSQL smoke test proving that a
 ## Searchable schedule project and employee selectors
 
 In Create / Edit Schedule, the **Project** column uses a searchable combobox that filters by Job No., SO No., Project Name, and client name. Each match displays its job number, project name, SO number and client. **Foremen** and **Labours** use the same keyboard-accessible searchable combobox; each scheduled job starts with one selector in each column, with **+ Add Foreman** or **+ Add Labour** buttons below. Extra rows can be removed, and duplicate people in the *same role within a job* are disabled. Each role requires at least one actual selection. Equipment retains its existing multi-select dialog. The combobox dropdown is rendered above the scrolling table to avoid clipping, accepts typing, arrow keys, Enter, and Escape. No database migration is required for this UI change.
+
+## Employees directory redesign (2026-11-17)
+
+The Employees route now uses `src/components/employee-directory.tsx` rather than the shared Projects/Equipments catalog table. The directory includes:
+
+- Comfortable (approximately 48 px) or Compact (approximately 40 px) rows, with a 40 px header and light-blue hover/focus highlight.
+- A fixed-width table with flexible Name column and a narrow right-aligned Actions column; sideways scrolling on smaller screens.
+- Sorting by clicking headers, independent filters for Designation, Location, Category and Status, search across Employee ID/Name/Designation, and 10/25/50-row pagination.
+- An accessible Columns chooser. Columns with the same value for every employee are hidden by default (except Employee ID and Name, which remain required). Remarks is hidden by default but remains available through Columns and the Name tooltip.
+- Colored Status badges: Active, Inactive, On leave, Terminated and Not set. Joining Date is shown as day/month/year or a muted dash when missing.
+- One ellipsis Actions menu per row (Edit/Delete), with an accessible confirmation dialog for deletion. Deletion is blocked by existing assignment foreign keys until those assignments are removed.
+- Existing Add/Edit, Excel import, delete and search workflows. Import Excel remains secondary; Add Employee is the primary action.
+
+**Database migration** `20261117020000_employee_directory_status` adds `Employee.status` without replacing the `remarks` field. Existing rows with Remarks exactly equal to a recognized status are backfilled; all other old rows remain `Not set`. New manually added employees default to `Active`, which can be changed in the form. Updated Excel templates have both Status and Remarks; existing Excel files lacking either/both optional columns are still accepted. A recognized status entered in the Remarks column of an old Excel file is preserved in Remarks and also mapped into Status. No new frontend libraries were installed.
+
+Run the existing manual Vercel deployment process to apply the migration to the configured production database and deploy the updated application. Git-triggered automatic Vercel deployments remain disabled.

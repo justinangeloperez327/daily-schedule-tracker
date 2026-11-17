@@ -114,8 +114,13 @@ export function ImportExcelDialog({
             <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm">
               <p className="font-medium">Expected columns ({config.fields.length})</p>
               <p className="mt-2 leading-6 text-muted-foreground">
-                {config.fields.map((field) => field.label).join(" · ")}
+                {config.fields.map((field) => field.label + (field.importOptional ? " (optional)" : "")).join(" · ")}
               </p>
+              {config.fields.some((field) => field.importOptional) && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Optional columns may be omitted from older Excel files. Existing Remarks data is preserved.
+                </p>
+              )}
               <Button
                 size="sm" variant="outline" className="mt-3"
                 onClick={downloadTemplate} disabled={templateLoading || importing}
