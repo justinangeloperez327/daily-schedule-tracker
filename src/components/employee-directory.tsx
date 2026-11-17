@@ -234,7 +234,7 @@ export function EmployeeDirectory() {
     const text = key === "employeeCode" ? employee.employeeCode ?? "" : String(employee[key] ?? "");
     if (!text) return <span className="text-muted-foreground">—</span>;
     if (key === "name") {
-      return <span className="block truncate font-semibold text-[#20262e]" title={employee.remarks || employee.name}>{text}</span>;
+      return <span className="block truncate font-semibold text-[#20262e]" title={employee.remarks ? employee.name + " — Remarks: " + employee.remarks : employee.name}>{text}</span>;
     }
     return <span className={"block truncate " + (key === "employeeCode" ? "font-mono tabular-nums font-medium text-[#374151]" : "text-[#545b64]")} title={text}>{text}</span>;
   }
