@@ -85,7 +85,7 @@ export const dispatchRowInput = z.object({
   id: z.string().min(1).max(200).optional(),
   projectId: z.string().min(1).max(200),
   foremanIds: z.array(z.string().min(1).max(200)).max(60),
-  employeeIds: z.array(z.string().min(1).max(200)).max(150),
+  employeeIds: z.array(z.string().min(1).max(200)).min(1, "Select at least one labour for each dispatch.").max(150),
   equipmentIds: z.array(z.string().min(1).max(200)).max(100).default([]),
   shift: z.enum(["Day", "Night"]),
   scope: z.string().trim().min(1).max(200),

@@ -14,12 +14,29 @@ import { emptyDispatch, scopeOptions, type DispatchEntry, type DispatchSheet } f
 import { apiRequest } from "@/lib/http";
 import { dateKey, dateLabel } from "@/lib/schedule";
 
-type EditorRow = DispatchEntry & { key: string };
-type PickerField = "foremanIds" | "employeeIds" | "equipmentIds";
+type LabourSlot = { key: string; employeeId: string };
+type EditorRow = Omit<DispatchEntry, "employeeIds"> & { key: string; labourSlots: LabourSlot[] };
+type PickerField = "foremanIds" | "equipmentIds";
 type Picker = { rowKey: string; field: PickerField };
 
+function labourSlot(employeeId = ""): LabourSlot {
+  return { key: crypto.randomUUID(), employeeId };
+}
+
 function newRow(): EditorRow {
-  return { key: crypto.randomUUID(), ...emptyDispatch() };
+  const draft = emptyDispatch();
+  return {
+    key: crypto.randomUUID(),
+    projectId: draft.projectId,
+    foremanIds: draft.foremanIds,
+    equipmentIds: draft.equipmentIds,
+    shift: draft.shift,
+    scope: draft.scope,
+    campStart: draft.campStart,
+    timeIn: draft.timeIn,
+    timeOut: draft.timeOut,
+    labourSlots: [labourSlot()],
+  };
 }
 
 function SelectField({ label, value, onChange, children }: {
@@ -34,7 +51,7 @@ function SelectField({ label, value, onChange, children }: {
 export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const router = useRouter();
   const [date, setDate] = React.useState("");
-  const [rows, setRows] = React.useState<EditorRow[]>([{ key: "first", ...emptyDispatch() }]);
+  const [rows, setRows] = React.useState<EditorRow[]>(() => [newRow()]);
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [employees, setEmployees] = React.useState<Employee[]>([]);
   const [equipments, setEquipments] = React.useState<Equipment[]>([]);
@@ -62,7 +79,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           id: r.id,
           projectId: r.projectId,
           foremanIds: r.foremanIds,
-          employeeIds: r.employeeIds,
+          labourSlots: r.employeeIds.length ? r.employeeIds.map((id) => labourSlot(id)) : [labourSlot()],
           equipmentIds: r.equipmentIds,
           shift: r.shift,
           scope: r.scope,
@@ -77,9 +94,40 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     return () => { active = false; };
   }, [sheetId]);
 
-  function patch<Key extends keyof DispatchEntry>(key: string, field: Key, value: DispatchEntry[Key]) {
+  function patch<Key extends Exclude<keyof DispatchEntry, "employeeIds">>(key: string, field: Key, value: DispatchEntry[Key]) {
     setRows((current) => current.map((row) => row.key === key ? { ...row, [field]: value } : row));
     setError("");
+  }
+
+  function setLabour(rowKey: string, slotKey: string, employeeId: string) {
+    setRows((current) => current.map((row) => row.key !== rowKey ? row : ({
+      ...row,
+      labourSlots: row.labourSlots.map((slot) =>
+        slot.key === slotKey ? { ...slot, employeeId } : slot
+      ),
+    })));
+    setError("");
+  }
+
+  function addLabour(rowKey: string) {
+    setRows((current) => current.map((row) =>
+      row.key === rowKey && row.labourSlots.length < 150
+        ? { ...row, labourSlots: [...row.labourSlots, labourSlot()] }
+        : row
+    ));
+  }
+
+  function removeLabour(rowKey: string, slotKey: string) {
+    setRows((current) => current.map((row) =>
+      row.key === rowKey && row.labourSlots.length > 1
+        ? { ...row, labourSlots: row.labourSlots.filter((slot) => slot.key !== slotKey) }
+        : row
+    ));
+    setError("");
+  }
+
+  function selectedLabours(row: EditorRow): string[] {
+    return row.labourSlots.map((slot) => slot.employeeId).filter(Boolean);
   }
 
   function toggleResource(key: string, field: PickerField, id: string) {
@@ -109,7 +157,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     const items = field === "equipmentIds"
       ? row.equipmentIds.map((id) => equipments.find((e) => e.id === id)?.vehicleDetails || "Equipment")
       : row[field].map((id) => employees.find((e) => e.id === id)?.name || "Employee");
-    if (!items.length) return field === "foremanIds" ? "Select foremen" : field === "employeeIds" ? "Select labours" : "Select equipment";
+    if (!items.length) return field === "foremanIds" ? "Select foremen" : "Select equipment";
     return items.join(", ");
   }
 
@@ -119,11 +167,16 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     if (!rows.length) { setError("Add at least one dispatch row."); return; }
     const invalid = rows.findIndex((r) => !r.projectId || !r.scope.trim() || !r.campStart || !r.timeIn || !r.timeOut);
     if (invalid >= 0) { setError("Row " + (invalid + 1) + ": select job and scope, and fill out all three times."); return; }
+    const missingLabour = rows.findIndex((r) => selectedLabours(r).length === 0);
+    if (missingLabour >= 0) {
+      setError("Row " + (missingLabour + 1) + ": select at least one labour.");
+      return;
+    }
     setSaving(true); setError("");
     try {
       const payload = { date, dispatches: rows.map((r) => ({
         ...(r.id ? { id: r.id } : {}),
-        projectId: r.projectId, foremanIds: r.foremanIds, employeeIds: r.employeeIds,
+        projectId: r.projectId, foremanIds: r.foremanIds, employeeIds: selectedLabours(r),
         equipmentIds: r.equipmentIds, shift: r.shift, scope: r.scope.trim(),
         campStart: r.campStart, timeIn: r.timeIn, timeOut: r.timeOut,
       })) };
@@ -144,7 +197,13 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     setExporting(true); setError("");
     try {
       const { exportDispatchSheet } = await import("@/lib/export-dispatch-sheet");
-      await exportDispatchSheet(date, rows, projects, employees, equipments);
+      await exportDispatchSheet(
+        date,
+        rows.map((row) => ({ ...row, employeeIds: selectedLabours(row) })),
+        projects,
+        employees,
+        equipments
+      );
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Export failed."); }
     finally { setExporting(false); }
   }
@@ -203,7 +262,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               <TableHead className="w-[55px] pl-5">#</TableHead>
               <TableHead className="min-w-[275px]">Select Job</TableHead>
               <TableHead className="min-w-[200px]">Foremen</TableHead>
-              <TableHead className="min-w-[210px]">Labours</TableHead>
+              <TableHead className="min-w-[260px]">Labours</TableHead>
               <TableHead className="min-w-[190px]">Equipment</TableHead>
               <TableHead className="min-w-[120px]">Day / Night</TableHead>
               <TableHead className="min-w-[210px]">Scope</TableHead>
@@ -230,16 +289,82 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       {projects.find((p) => p.id === row.projectId)?.clientName || "Client not specified"}
                     </p>}
                   </TableCell>
-                  {(["foremanIds", "employeeIds", "equipmentIds"] as PickerField[]).map((field) => (
-                    <TableCell key={field} className="min-w-[190px] py-4 align-top">
-                      <Button variant="outline" className="h-auto min-h-10 w-full items-start justify-between gap-2 whitespace-normal px-3 py-2 text-left font-normal"
-                        onClick={() => openPicker(row, field)}>
-                        <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenNames(row, field)}</span>
-                        <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
+                  <TableCell className="min-w-[190px] py-4 align-top">
+                    <Button variant="outline" className="h-auto min-h-10 w-full items-start justify-between gap-2 whitespace-normal px-3 py-2 text-left font-normal"
+                      onClick={() => openPicker(row, "foremanIds")}>
+                      <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenNames(row, "foremanIds")}</span>
+                      <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
+                    </Button>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{row.foremanIds.length} selected</p>
+                  </TableCell>
+                  <TableCell className="min-w-[260px] py-4 align-top">
+                    <div className="space-y-2.5">
+                      {row.labourSlots.map((slot, slotIndex) => (
+                        <div key={slot.key} className="flex min-w-0 items-center gap-1.5">
+                          <div className="min-w-0 flex-1">
+                            <SelectField
+                              label={"Labour " + (slotIndex + 1) + " for dispatch " + (index + 1)}
+                              value={slot.employeeId}
+                              onChange={(id) => setLabour(row.key, slot.key, id)}
+                            >
+                              <option value="">Select labour {slotIndex + 1}...</option>
+                              {employees.map((person) => (
+                                <option
+                                  key={person.id}
+                                  value={person.id}
+                                  disabled={row.labourSlots.some((other) =>
+                                    other.key !== slot.key && other.employeeId === person.id
+                                  )}
+                                >
+                                  {person.name || person.employeeCode || "Unnamed employee"}
+                                  {person.designation ? " — " + person.designation : ""}
+                                </option>
+                              ))}
+                            </SelectField>
+                          </div>
+                          {row.labourSlots.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={saving}
+                              className="shrink-0 text-destructive hover:text-destructive"
+                              aria-label={"Remove labour " + (slotIndex + 1) + " from dispatch " + (index + 1)}
+                              onClick={() => removeLabour(row.key, slot.key)}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-dashed"
+                        disabled={saving || row.labourSlots.length >= 150}
+                        onClick={() => addLabour(row.key)}
+                      >
+                        <Plus className="size-3.5" /> Add Labour
                       </Button>
-                      <p className="mt-1 text-[11px] text-muted-foreground">{row[field].length} selected</p>
-                    </TableCell>
-                  ))}
+                      {employees.length === 0 && (
+                        <Link href="/employees" className="block text-xs text-muted-foreground underline">
+                          Add or import employees first
+                        </Link>
+                      )}
+                      <p className="text-[11px] text-muted-foreground">
+                        {selectedLabours(row).length} selected · minimum 1
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="min-w-[190px] py-4 align-top">
+                    <Button variant="outline" className="h-auto min-h-10 w-full items-start justify-between gap-2 whitespace-normal px-3 py-2 text-left font-normal"
+                      onClick={() => openPicker(row, "equipmentIds")}>
+                      <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenNames(row, "equipmentIds")}</span>
+                      <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
+                    </Button>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{row.equipmentIds.length} selected</p>
+                  </TableCell>
                   <TableCell className="pt-4">
                     <SelectField label={"Shift for dispatch " + (index + 1)} value={row.shift}
                       onChange={(value) => patch(row.key, "shift", value as DispatchEntry["shift"])}>
@@ -309,8 +434,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       <Dialog open={!!picker} onOpenChange={(open) => { if (!open) setPicker(null); }}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>{picker?.field === "foremanIds" ? "Select Foremen" :
-              picker?.field === "employeeIds" ? "Select Labours" : "Select Equipment"}</DialogTitle>
+            <DialogTitle>{picker?.field === "foremanIds" ? "Select Foremen" : "Select Equipment"}</DialogTitle>
             <DialogDescription>Select multiple resources for this job. Click Done when finished.</DialogDescription>
           </DialogHeader>
           <Input value={pickerSearch} onChange={(event) => setPickerSearch(event.target.value)}

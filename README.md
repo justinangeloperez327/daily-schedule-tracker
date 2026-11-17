@@ -147,3 +147,8 @@ Migration `20261116000000_schedule_dispatch_sheets` groups existing schedule job
 ## Full-width data tables and hover feedback
 
 All data tables (schedule register, dispatch editor, project/employee/equipment directories, and Excel import preview) use the available horizontal layout. Long content wraps instead of being truncated, and row padding is more comfortable. A light-blue hover/focus background highlights active rows without obscuring values. Wide tables retain horizontal scrolling on smaller screens and longer register layouts. This is a presentation-only change; no Prisma migration is required.
+
+
+## Labours inside schedule dispatch rows
+
+In **Create / Edit Schedule**, each dispatch row starts with one inline **Select labour** dropdown in the Labours column. **Add Labour (+)** places another dropdown directly underneath in the same table cell. Additional dropdowns have individual Remove buttons; at least one selector always remains visible. A dispatch must contain at least one selected employee before saving, up to 150 unique labour assignments per dispatch. Employees already selected in the same dispatch are disabled in the other dropdowns. Empty optional extra dropdowns are ignored when saving and exporting. The foremen and equipment columns retain their existing multi-select controls. No database migration is needed.
