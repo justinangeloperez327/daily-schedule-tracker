@@ -57,20 +57,20 @@ export function ScheduleTracker() {
   }
 
   return (
-    <main className="w-full max-w-none px-4 pb-16 pt-9 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-5">
+    <main className="w-full min-w-0 max-w-none px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
+      <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-center">
         <div>
           <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">Schedules</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Manage daily work plans and dispatch teams in one register.
           </p>
         </div>
-        <Button asChild className="h-10 px-4">
+        <Button asChild className="h-10 w-full px-4 sm:w-auto">
           <Link href="/schedules/new"><Plus className="size-4" /> Create Schedule</Link>
         </Button>
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-xl border bg-white px-5 py-4">
           <p className="text-xs font-medium text-muted-foreground">Schedules</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{sheets.length}</p>
@@ -79,31 +79,34 @@ export function ScheduleTracker() {
           <p className="text-xs font-medium text-muted-foreground">Jobs planned</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{sheets.reduce((sum, sheet) => sum + sheet.jobs, 0)}</p>
         </div>
-        <div className="rounded-xl border bg-white px-5 py-4">
+        <div className="col-span-2 rounded-xl border bg-white px-4 py-3 sm:col-span-1 sm:px-5 sm:py-4">
           <p className="text-xs font-medium text-muted-foreground">Team dispatches</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{sheets.reduce((sum, sheet) => sum + sheet.teamDispatches, 0)}</p>
         </div>
       </div>
 
       {error && <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>}
-      <section className="overflow-hidden rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-5 sm:px-6">
+      <section className="min-w-0 rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]">
+        <div className="flex flex-col items-stretch justify-between gap-3 border-b border-border px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
           <div>
             <h2 className="text-base font-semibold">Schedule register</h2>
             <p className="mt-1 text-xs text-muted-foreground">One record contains multiple job dispatch rows.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative w-full sm:w-auto">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input value={search} onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search dates..." aria-label="Search schedules by date" className="w-48 pl-9" />
+                placeholder="Search dates..." aria-label="Search schedules by date" className="w-full pl-9 sm:w-48" />
             </div>
             <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}
-              aria-label="Filter by schedule date" className="w-40" />
+              aria-label="Filter by schedule date" className="w-full sm:w-40" />
             {dateFilter && <Button variant="ghost" size="sm" onClick={() => setDateFilter("")}>Clear</Button>}
           </div>
         </div>
 
+        <p className="px-3 py-2 text-xs text-muted-foreground sm:hidden">
+          Scroll the table sideways to see every schedule column.
+        </p>
         <Table className="min-w-[840px] table-fixed">
           <TableHeader className="bg-[#f8f9fa]">
             <TableRow>

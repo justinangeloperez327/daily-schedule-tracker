@@ -240,30 +240,30 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   }
 
   return (
-    <main className="w-full max-w-none px-4 pb-16 pt-9 sm:px-6 lg:px-8 2xl:px-10">
+    <main className="w-full min-w-0 max-w-none px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10">
       <Link href="/schedules" className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" /> Back to schedules
       </Link>
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-center">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">{sheetId ? "Edit Schedule" : "Create Schedule"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Assign jobs, foremen, labours, and working times for each dispatch team.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" disabled={loading || exporting || rows.length === 0} onClick={exportExcel}>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Button className="w-full sm:w-auto" variant="outline" disabled={loading || exporting || rows.length === 0} onClick={exportExcel}>
             <Download /> {exporting ? "Exporting..." : "Export Excel"}
           </Button>
-          <Button disabled={loading || saving || rows.length === 0} onClick={save}>
+          <Button className="w-full sm:w-auto" disabled={loading || saving || rows.length === 0} onClick={save}>
             <Save /> {saving ? "Saving..." : sheetId ? "Save Changes" : "Create Schedule"}
           </Button>
         </div>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-8 rounded-xl border bg-white px-5 py-4">
+      <div className="mb-6 grid grid-cols-2 items-center gap-4 rounded-xl border bg-white px-3 py-4 sm:flex sm:flex-wrap sm:gap-8 sm:px-5">
         <div className="space-y-1.5">
           <Label htmlFor="dispatch-date">Schedule Date</Label>
           <Input id="dispatch-date" type="date" value={date} disabled={loading || saving}
-            onChange={(event) => setDate(event.target.value)} className="w-48" />
+            onChange={(event) => setDate(event.target.value)} className="w-full sm:w-48" />
         </div>
         <div><p className="text-xs text-muted-foreground">Date</p>
           <p className="mt-1 text-sm font-medium">{date ? dateLabel(date) : "—"}</p></div>
@@ -274,8 +274,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       </div>
 
       {error && <p role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
-      <section className="rounded-xl border bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+      <section className="min-w-0 rounded-xl border bg-white">
+        <div className="flex flex-col items-start justify-between gap-3 border-b px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-5">
           <div>
             <h2 className="font-semibold">Dispatch table</h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -287,6 +287,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           </Button>
         </div>
 
+        <p className="px-3 py-2 text-xs text-muted-foreground lg:hidden">
+          Scroll the dispatch table sideways to assign jobs, teams, equipment, shifts and times.
+        </p>
         <Table className="min-w-[1720px] table-auto">
           <TableHeader className="bg-[#f8f9fa]">
             <TableRow>
@@ -488,7 +491,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             </TableCell></TableRow>}
           </TableBody>
         </Table>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4">
+        <div className="flex flex-col items-start justify-between gap-3 border-t px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-5">
           <p className="text-xs text-muted-foreground">24-hour times · Night shifts may finish the next morning.</p>
           <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setRows((current) => [...current, newRow()])}>
             <Plus /> Add Job

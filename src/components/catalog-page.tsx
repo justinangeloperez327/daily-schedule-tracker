@@ -131,15 +131,15 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   }
 
   return (
-    <main className="w-full max-w-none px-4 pb-16 pt-9 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-5">
+    <main className="w-full min-w-0 max-w-none px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
+      <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-center">
         <div>
           <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">
             {config.title}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{config.subtitle}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <ImportExcelDialog kind={kind} onImported={onImported} />
           <Button className="h-10" onClick={addNew}>
             <Plus /> Add {config.singular}
@@ -148,15 +148,15 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
       </div>
       {error && <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>}
       {notice && <p role="status" className="mb-4 text-sm text-foreground">{notice}</p>}
-      <section className="rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-5 sm:px-6">
+      <section className="min-w-0 rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]">
+        <div className="flex flex-col items-stretch justify-between gap-3 border-b border-border px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
           <div>
             <h2 className="text-base font-semibold">{config.title} directory</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               {records.length} {records.length === 1 ? "record" : "records"}
             </p>
           </div>
-          <div className="relative w-full sm:w-[260px]">
+          <div className="relative w-full min-w-0 sm:w-[260px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
@@ -167,6 +167,9 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
             />
           </div>
         </div>
+        <p className="px-3 py-2 text-xs text-muted-foreground sm:hidden">
+          Scroll the table sideways to view all columns.
+        </p>
         <Table className={kind === "projects" ? "min-w-[1840px] table-auto" : kind === "employees" ? "min-w-[1050px] table-auto" : "min-w-[960px] table-auto"}>
           <TableHeader className="bg-[#f8f9fa]">
             <TableRow>
