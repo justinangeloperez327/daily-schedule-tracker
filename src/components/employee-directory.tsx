@@ -239,26 +239,28 @@ export function EmployeeDirectory() {
     return <span className={"block truncate " + (key === "employeeCode" ? "font-mono tabular-nums font-medium text-[#374151]" : "text-[#545b64]")} title={text}>{text}</span>;
   }
 
-  const rowHeight = density === "comfortable" ? "h-12" : "h-10";
-  const padding = density === "comfortable" ? "px-3 py-1.5" : "px-3 py-1";
+  // A fixed 48px row height kept the directory tall even with smaller padding.
+  // The 28px actions trigger fits inside both heights without inflating them.
+  const rowHeight = density === "comfortable" ? "h-9" : "h-8";
+  const padding = density === "comfortable" ? "px-2.5 py-0.5" : "px-2.5 py-0";
 
   return (
-    <main className="min-h-[calc(100vh-64px)] w-full bg-[#f6f7f9] px-4 pb-16 pt-9 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
+    <main className="min-h-[calc(100vh-64px)] w-full min-w-0 bg-[#f6f7f9] px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">Employees</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">Employee register with designations, locations and joining details.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
           <ImportExcelDialog kind="employees" onImported={onImported} />
-          <Button className="h-10 px-4" onClick={addEmployee}><Plus className="size-4" /> Add Employee</Button>
+          <Button className="h-10 w-full px-4 sm:w-auto" onClick={addEmployee}><Plus className="size-4" /> Add Employee</Button>
         </div>
       </div>
 
       {error && <p role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-destructive">{error}</p>}
       {notice && <p role="status" className="mb-4 rounded-md border border-border bg-white px-3 py-2 text-sm">{notice}</p>}
-      <section className="overflow-visible rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
+      <section className="min-w-0 rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]">
+        <div className="flex flex-col gap-4 border-b border-border px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
           <div>
             <h2 className="text-base font-semibold">Employee directory</h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -266,8 +268,8 @@ export function EmployeeDirectory() {
               {hasFilters && <span> matching filters · {employees.length} total</span>}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-64">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+            <div className="relative w-full min-w-0 sm:w-64">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 aria-label="Search employee ID, name or designation"
@@ -316,15 +318,15 @@ export function EmployeeDirectory() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-end gap-3 border-b border-border px-5 py-3 sm:px-6">
-          <SlidersHorizontal aria-hidden="true" className="mb-2.5 size-4 text-muted-foreground" />
+        <div className="grid grid-cols-2 gap-2 border-b border-border px-3 py-3 sm:flex sm:flex-wrap sm:items-end sm:gap-3 sm:px-6">
+          <SlidersHorizontal aria-hidden="true" className="mb-2.5 hidden size-4 text-muted-foreground sm:block" />
           {(["designation", "location", "category", "status"] as FilterKey[]).map((key) => (
-            <label key={key} className="flex min-w-[142px] flex-col gap-1 text-xs font-medium text-[#545b64]">
+            <label key={key} className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[#545b64] sm:min-w-[142px]">
               {key === "designation" ? "Designation" : key === "location" ? "Location" : key === "category" ? "Category" : "Status"}
               <select
                 value={filters[key]}
                 onChange={(event) => updateFilter(key, event.target.value)}
-                className="h-9 max-w-[200px] rounded-md border border-input bg-white px-2 text-sm font-normal text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                className="h-9 w-full min-w-0 rounded-md border border-input bg-white px-2 text-sm font-normal text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/30 sm:max-w-[200px]"
               >
                 <option value="">All {key === "status" ? "statuses" : key === "category" ? "categories" : key + "s"}</option>
                 {filterChoices[key].map((choice) => (
@@ -336,13 +338,16 @@ export function EmployeeDirectory() {
             </label>
           ))}
           {hasFilters && (
-            <Button variant="ghost" size="sm" className="mb-0.5" onClick={resetFilters}>
+            <Button variant="ghost" size="sm" className="col-span-2 justify-self-start sm:mb-0.5" onClick={resetFilters}>
               <X className="size-4" /> Clear filters
             </Button>
           )}
         </div>
 
-        <Table className="w-full min-w-[1340px] table-fixed">
+        <p className="px-3 py-2 text-xs text-muted-foreground sm:hidden" id="employee-scroll-hint">
+          Swipe horizontally inside the table to view all columns.
+        </p>
+        <Table className="w-full min-w-[1200px] table-fixed">
           <colgroup>
             {displayedColumns.map((column) => (
               <col key={column.key} style={column.width ? { width: column.width } : undefined} />
@@ -350,7 +355,7 @@ export function EmployeeDirectory() {
             <col style={{ width: 80 }} />
           </colgroup>
           <TableHeader className="bg-[#f8f9fa]">
-            <TableRow className="h-10">
+            <TableRow className="h-9">
               {displayedColumns.map((column) => {
                 const sorted = sort.key === column.key;
                 return (
@@ -358,7 +363,7 @@ export function EmployeeDirectory() {
                     key={column.key}
                     scope="col"
                     aria-sort={sorted ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
-                    className="h-10 px-3 py-1.5 text-[11px] font-semibold tracking-[0.045em] text-[#48515e]"
+                    className="h-9 px-2.5 py-1 text-[11px] font-semibold tracking-[0.045em] text-[#48515e]"
                   >
                     <button
                       type="button"
@@ -374,7 +379,7 @@ export function EmployeeDirectory() {
                   </TableHead>
                 );
               })}
-              <TableHead scope="col" className="h-10 px-2 py-1.5 text-right text-[11px] font-semibold tracking-[0.045em] text-[#48515e]">Actions</TableHead>
+              <TableHead scope="col" className="h-9 px-2 py-1 text-right text-[11px] font-semibold tracking-[0.045em] text-[#48515e]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -419,11 +424,11 @@ export function EmployeeDirectory() {
           </TableBody>
         </Table>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 sm:px-6">
+        <div className="flex flex-col gap-3 border-t border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
             Showing {start}–{end} of {filtered.length}
           </p>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               Rows per page
               <select

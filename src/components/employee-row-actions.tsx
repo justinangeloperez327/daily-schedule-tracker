@@ -65,6 +65,7 @@ export function EmployeeRowActions({ employeeName, onEdit, onDelete }: Props) {
         type="button"
         size="icon-sm"
         variant="ghost"
+        className="size-7"
         title={"Actions for " + employeeName}
         aria-label={"Actions for " + employeeName}
         aria-haspopup="menu"
