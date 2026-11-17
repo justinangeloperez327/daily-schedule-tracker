@@ -1,9 +1,47 @@
 import { NextResponse } from "next/server";
+import { getPrisma } from "@/lib/prisma";
+import { apiError, parseJson } from "@/lib/api-response";
+import { dailyScheduleInput } from "@/lib/validation";
+import { scheduleDto, scheduleInclude, scheduleSummaryInclude, scheduleSummaryDto } from "@/lib/schedule-server";
 
-// The legacy per-job endpoints have been superseded by date-level schedule sheets.
-export function GET() {
-  return NextResponse.json({ error: "Use /api/schedule-sheets for the new schedule register." }, { status: 410 });
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const schedules = await getPrisma().schedule.findMany({
+      include: scheduleSummaryInclude,
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    });
+    return NextResponse.json(schedules.map(scheduleSummaryDto));
+  } catch (error) { return apiError(error); }
 }
-export function POST() { return GET(); }
-export function PUT() { return GET(); }
-export function DELETE() { return GET(); }
+
+export async function POST(request: Request) {
+  try {
+    const input = dailyScheduleInput.parse(await parseJson(request));
+    const schedule = await getPrisma().schedule.create({
+      data: {
+        date: input.date,
+        jobs: {
+          create: input.jobs.map((job, index) => ({
+            date: input.date,
+            jobNo: "",
+            project: { connect: { id: job.projectId } },
+            sortOrder: index,
+            shift: job.shift,
+            scope: job.scope,
+            campStart: job.campStart,
+            timeIn: job.timeIn,
+            timeOut: job.timeOut,
+            foremen: { create: job.foremanIds.map((id) => ({ employee: { connect: { id } } })) },
+            labours: { create: job.employeeIds.map((id) => ({ employee: { connect: { id } } })) },
+            equipments: { create: job.equipmentIds.map((id) => ({ equipment: { connect: { id } } })) },
+          })),
+        },
+      },
+      include: scheduleInclude,
+    });
+    return NextResponse.json(scheduleDto(schedule), { status: 201 });
+  } catch (error) { return apiError(error); }
+}

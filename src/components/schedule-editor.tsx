@@ -68,13 +68,13 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       apiRequest<Project[]>("/api/projects"),
       apiRequest<Employee[]>("/api/employees"),
       apiRequest<Equipment[]>("/api/equipments"),
-      sheetId ? apiRequest<DispatchSheet>("/api/schedule-sheets/" + encodeURIComponent(sheetId)) : Promise.resolve(null),
+      sheetId ? apiRequest<DispatchSheet>("/api/schedules/" + encodeURIComponent(sheetId)) : Promise.resolve(null),
     ]).then(([p, e, equipment, sheet]) => {
       if (!active) return;
       setProjects(p); setEmployees(e); setEquipments(equipment);
       if (sheet) {
         setDate(sheet.date);
-        setRows(sheet.dispatches.map((r) => ({
+        setRows(sheet.jobs.map((r) => ({
           key: r.id || crypto.randomUUID(),
           id: r.id,
           projectId: r.projectId,
@@ -172,15 +172,25 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       setError("Row " + (missingLabour + 1) + ": select at least one labour.");
       return;
     }
+    const missingForeman = rows.findIndex((r) => r.foremanIds.length === 0);
+    if (missingForeman >= 0) {
+      setError("Row " + (missingForeman + 1) + ": select at least one foreman.");
+      return;
+    }
+    const missingEquipment = rows.findIndex((r) => r.equipmentIds.length === 0);
+    if (missingEquipment >= 0) {
+      setError("Row " + (missingEquipment + 1) + ": select at least one equipment item.");
+      return;
+    }
     setSaving(true); setError("");
     try {
-      const payload = { date, dispatches: rows.map((r) => ({
+      const payload = { date, jobs: rows.map((r) => ({
         ...(r.id ? { id: r.id } : {}),
         projectId: r.projectId, foremanIds: r.foremanIds, employeeIds: selectedLabours(r),
         equipmentIds: r.equipmentIds, shift: r.shift, scope: r.scope.trim(),
         campStart: r.campStart, timeIn: r.timeIn, timeOut: r.timeOut,
       })) };
-      await apiRequest<DispatchSheet>(sheetId ? "/api/schedule-sheets/" + encodeURIComponent(sheetId) : "/api/schedule-sheets", {
+      await apiRequest<DispatchSheet>(sheetId ? "/api/schedules/" + encodeURIComponent(sheetId) : "/api/schedules", {
         method: sheetId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -248,11 +258,11 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           <div>
             <h2 className="font-semibold">Dispatch table</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              One row = one team dispatch. A job may have multiple rows, foremen and labourers.
+              One row = one scheduled job. A job may have multiple foremen, labourers and equipment assignments.
             </p>
           </div>
           <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setRows((current) => [...current, newRow()])}>
-            <Plus /> Add Job / Team
+            <Plus /> Add Job
           </Button>
         </div>
 
@@ -261,9 +271,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             <TableRow>
               <TableHead className="w-[55px] pl-5">#</TableHead>
               <TableHead className="min-w-[275px]">Select Job</TableHead>
-              <TableHead className="min-w-[200px]">Foremen</TableHead>
-              <TableHead className="min-w-[260px]">Labours</TableHead>
-              <TableHead className="min-w-[190px]">Equipment</TableHead>
+              <TableHead className="min-w-[200px]">Foremen *</TableHead>
+              <TableHead className="min-w-[260px]">Labours *</TableHead>
+              <TableHead className="min-w-[190px]">Equipment *</TableHead>
               <TableHead className="min-w-[120px]">Day / Night</TableHead>
               <TableHead className="min-w-[210px]">Scope</TableHead>
               <TableHead className="min-w-[235px]">Time</TableHead>
@@ -295,7 +305,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenNames(row, "foremanIds")}</span>
                       <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
                     </Button>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{row.foremanIds.length} selected</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{row.foremanIds.length} selected · minimum 1</p>
                   </TableCell>
                   <TableCell className="min-w-[260px] py-4 align-top">
                     <div className="space-y-2.5">
@@ -363,7 +373,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenNames(row, "equipmentIds")}</span>
                       <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
                     </Button>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{row.equipmentIds.length} selected</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{row.equipmentIds.length} selected · minimum 1</p>
                   </TableCell>
                   <TableCell className="pt-4">
                     <SelectField label={"Shift for dispatch " + (index + 1)} value={row.shift}
@@ -419,7 +429,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4">
           <p className="text-xs text-muted-foreground">24-hour times · Night shifts may finish the next morning.</p>
           <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setRows((current) => [...current, newRow()])}>
-            <Plus /> Add Job / Team
+            <Plus /> Add Job
           </Button>
         </div>
       </section>

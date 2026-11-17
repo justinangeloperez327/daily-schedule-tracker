@@ -17,7 +17,7 @@ export type DispatchSheet = {
   id: string;
   date: string;
   updatedAt: string;
-  dispatches: Array<DispatchEntry & {
+  jobs: Array<DispatchEntry & {
     jobNo: string;
     projectName: string;
     clientName: string;

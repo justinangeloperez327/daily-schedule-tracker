@@ -81,35 +81,34 @@ export const scheduleInput = z.object({
   path: ["equipmentIds"],
 });
 
-export const dispatchRowInput = z.object({
+// Each job has at least one foreman, labourer and equipment assignment.
+// Prisma junction tables guarantee referential integrity and prevent repeated
+// assignments within one role. Minimum counts are enforced at this API boundary.
+export const scheduleJobInput = z.object({
   id: z.string().min(1).max(200).optional(),
   projectId: z.string().min(1).max(200),
-  foremanIds: z.array(z.string().min(1).max(200)).max(60),
-  employeeIds: z.array(z.string().min(1).max(200)).min(1, "Select at least one labour for each dispatch.").max(150),
-  equipmentIds: z.array(z.string().min(1).max(200)).max(100).default([]),
+  foremanIds: z.array(z.string().min(1).max(200)).min(1, "Select at least one foreman for each job.").max(60),
+  employeeIds: z.array(z.string().min(1).max(200)).min(1, "Select at least one labourer for each job.").max(150),
+  equipmentIds: z.array(z.string().min(1).max(200)).min(1, "Select at least one equipment item for each job.").max(100),
   shift: z.enum(["Day", "Night"]),
   scope: z.string().trim().min(1).max(200),
   campStart: time,
   timeIn: time,
   timeOut: time,
-}).strict().superRefine((entry, context) => {
-  if (new Set(entry.foremanIds).size !== entry.foremanIds.length) {
-    context.addIssue({ code: "custom", path: ["foremanIds"], message: "Duplicate foremen within a dispatch are not allowed." });
-  }
-  if (new Set(entry.employeeIds).size !== entry.employeeIds.length) {
-    context.addIssue({ code: "custom", path: ["employeeIds"], message: "Duplicate labourers within a dispatch are not allowed." });
-  }
-  if (new Set(entry.equipmentIds).size !== entry.equipmentIds.length) {
-    context.addIssue({ code: "custom", path: ["equipmentIds"], message: "Duplicate equipment within a dispatch is not allowed." });
+}).strict().superRefine((job, ctx) => {
+  for (const field of ["foremanIds", "employeeIds", "equipmentIds"] as const) {
+    if (new Set(job[field]).size !== job[field].length) {
+      ctx.addIssue({ code: "custom", path: [field], message: "Do not assign the same resource twice within a job role." });
+    }
   }
 });
 
-export const scheduleSheetInput = z.object({
+export const dailyScheduleInput = z.object({
   date,
-  dispatches: z.array(dispatchRowInput).min(1).max(100),
-}).strict().superRefine((sheet, context) => {
-  const ids = sheet.dispatches.flatMap((entry) => entry.id ? [entry.id] : []);
+  jobs: z.array(scheduleJobInput).min(1, "Add at least one job.").max(100),
+}).strict().superRefine((schedule, ctx) => {
+  const ids = schedule.jobs.flatMap((job) => job.id ? [job.id] : []);
   if (new Set(ids).size !== ids.length) {
-    context.addIssue({ code: "custom", path: ["dispatches"], message: "Duplicate dispatch row identifiers." });
+    ctx.addIssue({ code: "custom", path: ["jobs"], message: "Duplicate job row identifiers." });
   }
 });

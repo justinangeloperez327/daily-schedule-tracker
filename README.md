@@ -152,3 +152,18 @@ All data tables (schedule register, dispatch editor, project/employee/equipment 
 ## Labours inside schedule dispatch rows
 
 In **Create / Edit Schedule**, each dispatch row starts with one inline **Select labour** dropdown in the Labours column. **Add Labour (+)** places another dropdown directly underneath in the same table cell. Additional dropdowns have individual Remove buttons; at least one selector always remains visible. A dispatch must contain at least one selected employee before saving, up to 150 unique labour assignments per dispatch. Employees already selected in the same dispatch are disabled in the other dropdowns. Empty optional extra dropdowns are ignored when saving and exporting. The foremen and equipment columns retain their existing multi-select controls. No database migration is needed.
+
+
+## Database relationship hierarchy (17 Nov 2026)
+
+The logical and physical PostgreSQL tables now match the schedule hierarchy:
+
+- **Schedule (1) → ScheduleJob (many):** a schedule has a date and many job rows.
+- **ScheduleJob (many) → Project (1):** every scheduled job selects an existing Project; the same Project may appear on multiple schedules or dispatch rows.
+- **ScheduleJob (1) → JobForeman (many) → Employee (1):** assign one or multiple foremen to a job.
+- **ScheduleJob (1) → JobLabour (many) → Employee (1):** assign one or multiple labourers to a job.
+- **ScheduleJob (1) → JobEquipment (many) → Equipment (1):** assign one or multiple equipment items to a job.
+
+The API enforces **at least one job per schedule and at least one foreman, labourer and equipment item per new/edited job**. Junction-table composite primary keys prevent duplicate assignments within each role; foreign keys preserve resource integrity. Foremen and labourers reference the same Employees master data with independent roles. The existing Labour dropdowns (+ Add Labour) are preserved.
+
+Migration `20261117010000_schedule_job_relationships` **renames** the previous `ScheduleSheet`, `Schedule`, `ScheduleForeman`, `ScheduleEmployee`, `ScheduleEquipment` tables and foreign-key columns; it does not drop or rebuild them. Existing IDs, job data, employee/equipment assignments and schedules are preserved. Historical jobs missing a foreman, labourer or equipment are not backfilled with invented records; assign the missing resources before editing and saving those jobs. The next **manual Vercel deployment** will run the migration using the configured production database URL. Automatic Vercel Git deployments remain disabled.

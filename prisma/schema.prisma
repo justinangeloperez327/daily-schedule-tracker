@@ -7,123 +7,128 @@ datasource db {
   provider = "postgresql"
 }
 
+// A Project is the master list of selectable jobs; it can be assigned to many schedules.
 model Project {
-  id              String     @id @default(cuid())
-  soNo            String     @default("")
+  id              String        @id @default(cuid())
+  soNo            String        @default("")
   jobNo           String?
-  rev             String     @default("")
+  rev             String        @default("")
   clientName      String
-  mainCategory    String     @default("")
-  subCategory     String     @default("")
+  mainCategory    String        @default("")
+  subCategory     String        @default("")
   name            String
-  descriptions    String     @default("") @db.Text
-  contractValue   String     @default("")
-  paymentTerms    String     @default("") @db.Text
-  status          String     @default("")
-  projectInCharge String     @default("")
-  schedules       Schedule[]
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  descriptions    String        @default("") @db.Text
+  contractValue   String        @default("")
+  paymentTerms    String        @default("") @db.Text
+  status          String        @default("")
+  projectInCharge String        @default("")
+  scheduleJobs    ScheduleJob[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([jobNo, rev])
   @@index([name])
 }
 
+// The same employee can be assigned to multiple jobs, as foreman and/or labour.
 model Employee {
-  id          String             @id @default(cuid())
-  employeeCode String?
-  name        String
-  designation String
-  location    String             @default("")
-  category    String             @default("")
-  joiningDate String             @default("")
-  remarks     String             @default("") @db.Text
-  assignments ScheduleEmployee[]
-  foremanAssignments ScheduleForeman[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id                 String       @id @default(cuid())
+  employeeCode       String?
+  name               String
+  designation        String
+  location           String       @default("")
+  category           String       @default("")
+  joiningDate        String       @default("")
+  remarks            String       @default("") @db.Text
+  labourAssignments  JobLabour[]
+  foremanAssignments JobForeman[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   @@index([name])
   @@index([employeeCode])
 }
 
 model Equipment {
-  id             String              @id @default(cuid())
+  id             String         @id @default(cuid())
   registrationNo String?
   vehicleType    String
   vehicleDetails String
-  limit          String              @default("")
-  modelYear      String              @default("")
-  remarks        String              @default("") @db.Text
-  assignments    ScheduleEquipment[]
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  limit          String         @default("")
+  modelYear      String         @default("")
+  remarks        String         @default("") @db.Text
+  jobAssignments JobEquipment[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@index([vehicleDetails])
   @@index([registrationNo])
 }
 
-model ScheduleSheet {
-  id          String      @id @default(cuid())
-  date        String
-  dispatches  Schedule[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+// One schedule contains many jobs/dispatch rows.
+model Schedule {
+  id        String        @id @default(cuid())
+  date      String        // YYYY-MM-DD site-local calendar date
+  jobs      ScheduleJob[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@index([date])
 }
 
-model Schedule {
-  sheetId    String
-  sheet      ScheduleSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
-  sortOrder  Int                 @default(0)
-  shift      String              @default("Day")
-  campStart  String              @default("")
-  foremen    ScheduleForeman[]
-  id         String              @id @default(cuid())
-  date       String              // YYYY-MM-DD; site-local calendar date
-  jobNo      String
-  projectId  String
-  project    Project             @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  timeIn     String              // 24-hour HH:mm site-local time
-  timeOut    String
-  scope      String              @db.Text
-  employees  ScheduleEmployee[]
-  equipments ScheduleEquipment[]
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
+// Every job belongs to exactly one schedule and references one Project.
+// The job's foremen, labourers and equipment are many-to-many assignments.
+model ScheduleJob {
+  id           String         @id @default(cuid())
+  scheduleId   String
+  schedule     Schedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  date         String         // Retained from legacy job records for backward compatibility
+  jobNo        String         // Retained from legacy job records for backward compatibility
+  sortOrder    Int            @default(0)
+  shift        String         @default("Day")
+  campStart    String         @default("")
+  timeIn       String
+  timeOut      String
+  scope        String         @db.Text
+  foremen      JobForeman[]
+  labours      JobLabour[]
+  equipments   JobEquipment[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@index([date, timeIn])
-  @@index([sheetId, sortOrder])
+  @@index([scheduleId, sortOrder])
   @@index([projectId])
 }
 
-model ScheduleEmployee {
-  scheduleId String
+model JobForeman {
+  jobId      String
   employeeId String
-  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  job        ScheduleJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Restrict)
 
-  @@id([scheduleId, employeeId])
+  @@id([jobId, employeeId])
   @@index([employeeId])
 }
 
-model ScheduleEquipment {
-  scheduleId  String
+model JobLabour {
+  jobId      String
+  employeeId String
+  job        ScheduleJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@id([jobId, employeeId])
+  @@index([employeeId])
+}
+
+model JobEquipment {
+  jobId       String
   equipmentId String
-  schedule    Schedule  @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  job         ScheduleJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  equipment   Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
 
-  @@id([scheduleId, equipmentId])
+  @@id([jobId, equipmentId])
   @@index([equipmentId])
-}
-
-model ScheduleForeman {
-  scheduleId String
-  employeeId String
-  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-
-  @@id([scheduleId, employeeId])
-  @@index([employeeId])
 }

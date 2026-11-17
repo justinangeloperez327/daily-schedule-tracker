@@ -29,7 +29,7 @@ export function ScheduleTracker() {
 
   React.useEffect(() => {
     let mounted = true;
-    apiRequest<ScheduleSummary[]>("/api/schedule-sheets")
+    apiRequest<ScheduleSummary[]>("/api/schedules")
       .then((items) => { if (mounted) { setSheets(items); setError(""); } })
       .catch((cause: unknown) => { if (mounted) setError(cause instanceof Error ? cause.message : "Unable to load schedules."); })
       .finally(() => { if (mounted) setLoading(false); });
@@ -47,7 +47,7 @@ export function ScheduleTracker() {
     setDeleting(sheet.id);
     setError("");
     try {
-      await apiRequest<{ success: true }>("/api/schedule-sheets/" + encodeURIComponent(sheet.id), { method: "DELETE" });
+      await apiRequest<{ success: true }>("/api/schedules/" + encodeURIComponent(sheet.id), { method: "DELETE" });
       setSheets((current) => current.filter((entry) => entry.id !== sheet.id));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to delete schedule.");
