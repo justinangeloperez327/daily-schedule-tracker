@@ -1,2 +1,4 @@
-// Legacy API alias; Schedule now owns its jobs directly.
-export { GET, PUT, DELETE, runtime, dynamic } from "@/app/api/schedules/[id]/route";
+// Backward-compatible alias for older clients.
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export { GET, PUT, DELETE } from "@/app/api/schedules/[id]/route";
