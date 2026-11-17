@@ -41,6 +41,9 @@ jobs:
           npm run db:deploy
           npx prisma migrate status
 
+      - name: Verify schedule job relationships and cascades
+        run: node scripts/verify-schedule-relations.mjs
+
       - name: Type-check
         run: npm run typecheck
 
