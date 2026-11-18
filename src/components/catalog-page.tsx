@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ClipboardList, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -11,11 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablePagination } from "@/components/ui/table-pagination";
 import type { CatalogKind } from "@/lib/catalog";
 import { catalogConfigs, emptyCatalogDraft } from "@/lib/catalog-config";
 import { apiRequest } from "@/lib/http";
 
 type CatalogRow = { id: string; [key: string]: unknown };
+
+// Keep these project values in the database, forms and Excel workflows.
+// Hiding them is a directory-display decision only.
+const hiddenProjectColumns = new Set(["rev", "paymentTerms", "contractValue"]);
 
 function getValue(record: CatalogRow, key: string): string {
   const value = record[key];
@@ -29,6 +35,8 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   const [saving, setSaving] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [density, setDensity] = React.useState<"comfortable" | "compact">("comfortable");
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
   const [formError, setFormError] = React.useState("");
@@ -58,6 +66,12 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
       (field) => getValue(record, field.key).toLowerCase().includes(query.trim().toLowerCase())
     )
   );
+  const visibleFields = kind === "projects"
+    ? config.fields.filter((field) => !hiddenProjectColumns.has(field.key))
+    : config.fields;
+  const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visibleRows = matches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function addNew() {
     setEditingId(null);
@@ -155,7 +169,8 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
           <div>
             <h2 className="text-base font-semibold">{config.title} directory</h2>
             <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-              {records.length} {records.length === 1 ? "record" : "records"}
+              {matches.length} {matches.length === 1 ? "record" : "records"}
+              {query.trim() && <span> matching search · {records.length} total</span>}
             </p>
           </div>
           <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -166,7 +181,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
               aria-label={"Search " + config.title.toLowerCase()}
               value={query}
               placeholder={"Search " + config.title.toLowerCase() + "..."}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
             />
           </div>
           <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -186,10 +201,10 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
         <p className="px-3 py-2 text-xs text-muted-foreground sm:hidden">
           Scroll the table sideways to view all columns.
         </p>
-        <Table className={kind === "projects" ? "min-w-[1840px] table-auto" : "min-w-[960px] table-auto"}>
+        <Table className={kind === "projects" ? "min-w-[1820px] table-auto" : "min-w-[960px] table-auto"}>
           <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
-              {config.fields.map((field) => (
+              {visibleFields.map((field) => (
                 <TableHead key={field.key} className={
                   ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
                     ? "h-9 min-w-[220px] px-4 py-1.5"
@@ -200,22 +215,47 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!loading && matches.map((record) => (
+            {!loading && visibleRows.map((record) => (
               <TableRow key={record.id} className={density === "comfortable" ? "h-9" : "h-8"}>
-                {config.fields.map((field) => (
+                {visibleFields.map((field) => (
                   <TableCell
                     key={field.key}
                     className={(density === "comfortable" ? "py-0.5" : "py-0") +
-                      " min-w-[116px] max-w-[360px] px-4 align-middle text-sm leading-5 text-[#50677F]"}
+                      (kind === "projects"
+                        ? " min-w-[135px] max-w-[400px] px-4 align-top text-sm leading-5 text-[#50677F]"
+                        : " min-w-[116px] max-w-[360px] px-4 align-middle text-sm leading-5 text-[#50677F]")}
                     title={getValue(record, field.key)}
                   >
-                    <span className="block max-w-[340px] truncate">
-                      {getValue(record, field.key) || "—"}
-                    </span>
+                    {kind === "projects" ? (
+                      field.key === "name" ? (
+                        <Link
+                          href={"/projects/" + encodeURIComponent(record.id)}
+                          className="block whitespace-pre-wrap break-words font-semibold text-primary underline-offset-2 hover:underline [overflow-wrap:anywhere]"
+                        >
+                          {getValue(record, field.key) || "—"}
+                        </Link>
+                      ) : (
+                        <span className={"block whitespace-pre-wrap break-words [overflow-wrap:anywhere]" +
+                          (["soNo", "jobNo"].includes(field.key) ? " font-mono text-[#365F91]" : "")}>
+                          {getValue(record, field.key) || "—"}
+                        </span>
+                      )
+                    ) : (
+                      <span className="block max-w-[340px] truncate">
+                        {getValue(record, field.key) || "—"}
+                      </span>
+                    )}
                   </TableCell>
                 ))}
-                <TableCell className={(density === "comfortable" ? "py-0.5" : "py-0") + " px-3.5 align-middle"}>
+                <TableCell className={(density === "comfortable" ? "py-0.5" : "py-0") + " px-3.5 align-top"}>
                   <div className="flex flex-nowrap justify-end gap-1">
+                    {kind === "projects" && (
+                      <Button asChild size="icon-sm" variant="ghost" className="size-7">
+                        <Link href={"/projects/" + encodeURIComponent(record.id)} aria-label={"View full project " + getValue(record, "name")} title="View full project">
+                          <Eye className="size-3.5" />
+                        </Link>
+                      </Button>
+                    )}
                     <Button size="icon-sm" variant="ghost" className="size-7" aria-label={"Edit record " + record.id} title="Edit record" onClick={() => edit(record)}>
                       <Pencil className="size-3.5" />
                     </Button>
@@ -228,7 +268,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
             ))}
             {(loading || matches.length === 0) && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={config.fields.length + 1} className="py-16 text-center">
+                <TableCell colSpan={visibleFields.length + 1} className="py-16 text-center">
                   <div className="mx-auto flex flex-col items-center text-muted-foreground">
                     <ClipboardList className="mb-3 size-6" />
                     <p className="text-sm">
@@ -241,6 +281,14 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
             )}
           </TableBody>
         </Table>
+        <TablePagination
+          total={matches.length}
+          page={currentPage}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+          disabled={loading}
+        />
       </section>
 
       <Dialog open={dialogOpen} onOpenChange={(next) => { if (!saving) setDialogOpen(next); }}>

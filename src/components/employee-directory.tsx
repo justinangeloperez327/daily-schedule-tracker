@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import {
-  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, ChevronDown,
+  ArrowDown, ArrowUp, ArrowUpDown, ChevronDown,
   ClipboardList, Columns3, Plus, Search, SlidersHorizontal, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { EmployeeRowActions } from "@/components/employee-row-actions";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { ImportExcelDialog, type ImportResult } from "@/components/import-excel-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,7 +82,7 @@ export function EmployeeDirectory() {
   const [visibleOverrides, setVisibleOverrides] = React.useState<Partial<Record<ColumnKey, boolean>>>({});
   const [sort, setSort] = React.useState<{ key: ColumnKey; direction: Direction }>({ key: "name", direction: "asc" });
   const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(25);
+  const [pageSize, setPageSize] = React.useState(10);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<Record<string, string>>(emptyDraft);
@@ -149,8 +150,6 @@ export function EmployeeDirectory() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const activePage = Math.min(page, totalPages);
   const visibleRows = filtered.slice((activePage - 1) * pageSize, activePage * pageSize);
-  const start = filtered.length ? (activePage - 1) * pageSize + 1 : 0;
-  const end = Math.min(activePage * pageSize, filtered.length);
   const hasFilters = !!query.trim() || Object.values(filters).some(Boolean);
 
   function updateFilter(key: FilterKey, value: string) {
@@ -425,37 +424,14 @@ export function EmployeeDirectory() {
           </TableBody>
         </Table>
 
-        <div className="flex flex-col gap-3 border-t border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p className="technical-number text-xs text-muted-foreground" aria-live="polite">
-            Showing {start}–{end} of {filtered.length}
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              Rows per page
-              <select
-                aria-label="Rows per page"
-                value={pageSize}
-                onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}
-                className="h-8 rounded-md border border-input bg-white px-2 text-sm text-foreground"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </label>
-            <span className="technical-number text-xs text-muted-foreground">Page {activePage} of {totalPages}</span>
-            <Button
-              variant="outline" size="icon-sm" title="Previous page" aria-label="Previous page"
-              disabled={activePage <= 1 || loading}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-            ><ArrowLeft className="size-4" /></Button>
-            <Button
-              variant="outline" size="icon-sm" title="Next page" aria-label="Next page"
-              disabled={activePage >= totalPages || loading}
-              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            ><ArrowRight className="size-4" /></Button>
-          </div>
-        </div>
+        <TablePagination
+          total={filtered.length}
+          page={activePage}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+          disabled={loading}
+        />
       </section>
 
       <Dialog open={editOpen} onOpenChange={(open) => { if (!saving) setEditOpen(open); }}>
