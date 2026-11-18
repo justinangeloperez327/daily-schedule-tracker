@@ -553,7 +553,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           </TableBody>
         </Table>
         <div className="flex flex-col items-start justify-between gap-3 border-t px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-5">
-          <p className="text-xs text-muted-foreground">24-hour times · Night shifts may finish the next morning.</p>
+          <p className="text-xs text-muted-foreground">24-hour times · Night shifts may finish the next morning. Header sorting changes the displayed order only, not the saved job order.</p>
           <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setRows((current) => [...current, newRow()])}>
             <Plus /> Add Job
           </Button>
