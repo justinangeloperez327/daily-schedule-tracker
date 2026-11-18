@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { SortableTableHead, type TableSortDirection } from "@/components/ui/sortable-table-head";
+import { compareTableValues } from "@/lib/table-sort";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import type { CatalogKind } from "@/lib/catalog";
 import { catalogConfigs, emptyCatalogDraft } from "@/lib/catalog-config";
@@ -38,6 +40,10 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   const [density, setDensity] = React.useState<"comfortable" | "compact">("comfortable");
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
+  const [sort, setSort] = React.useState<{ key: string; direction: TableSortDirection }>(() => ({
+    key: kind === "equipments" ? "vehicleDetails" : "name",
+    direction: "asc",
+  }));
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
   const [formError, setFormError] = React.useState("");
@@ -65,17 +71,31 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
     return () => { alive = false; };
   }, [kind]);
 
-  const matches = records.filter((record) =>
-    !query.trim() || config.fields.some(
-      (field) => getValue(record, field.key).toLowerCase().includes(query.trim().toLowerCase())
+  const matches = records
+    .filter((record) =>
+      !query.trim() || config.fields.some(
+        (field) => getValue(record, field.key).toLowerCase().includes(query.trim().toLowerCase())
+      )
     )
-  );
+    .sort((a, b) =>
+      compareTableValues(getValue(a, sort.key), getValue(b, sort.key), sort.direction) ||
+      compareTableValues(getValue(a, "name") || getValue(a, "vehicleDetails"), getValue(b, "name") || getValue(b, "vehicleDetails"), "asc") ||
+      compareTableValues(a.id, b.id, "asc")
+    );
   const visibleFields = kind === "projects"
     ? config.fields.filter((field) => !hiddenProjectColumns.has(field.key))
     : config.fields;
   const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const visibleRows = matches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  function sortBy(key: string) {
+    setSort((previous) => ({
+      key,
+      direction: previous.key === key && previous.direction === "asc" ? "desc" : "asc",
+    }));
+    setPage(1);
+  }
 
   function addNew() {
     setEditingId(null);
@@ -215,11 +235,15 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
           <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
               {visibleFields.map((field) => (
-                <TableHead key={field.key} className={
-                  ["name", "clientName", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
+                <SortableTableHead
+                  key={field.key}
+                  label={field.label}
+                  direction={sort.key === field.key ? sort.direction : undefined}
+                  onSort={() => sortBy(field.key)}
+                  className={["name", "clientName", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
                     ? "h-9 min-w-[220px] px-4 py-1.5"
-                    : "h-9 min-w-[116px] px-4 py-1.5"
-                }>{field.label}</TableHead>
+                    : "h-9 min-w-[116px] px-4 py-1.5"}
+                />
               ))}
               <TableHead className="h-9 w-[78px] min-w-[78px] px-4 py-1.5 text-right">Actions</TableHead>
             </TableRow>
