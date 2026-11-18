@@ -235,3 +235,15 @@ Project and Equipment rows now use a single accessible **⋯ Actions** dropdown,
 - The Excel import preview is intentionally read-only and retains source worksheet row order and row numbers. It has no editable record actions or sorting, to avoid confusing the preview with the master-data registers.
 
 No third-party dependencies, API changes, or new database migrations were added. Manual Vercel deployment remains unchanged.
+
+## Card-based Schedule Planner (November 2026)
+
+**Create Schedule** and **Edit Schedule** now use one responsive **job card per dispatch** rather than a 1945px editable table. Each card groups the Project/Job lookup, Scope, Day/Night shift, Camp start, Work start, Work end, and three independently searchable resource panels:
+
+- **Foremen** — a search field plus a fixed-height, vertically scrollable list of employees whose designation is `Site Foreman`. Search by name/employee ID/designation, tick checkboxes to assign, untick to remove.
+- **Labourers** — a separate search field and scrollable roster from the employee directory; multiple selections supported, displaying employee IDs and designations.
+- **Equipment** — a separate search field and scrollable equipment directory, showing registration and vehicle type/details and allowing multiple selections.
+
+Selections are shown at the top of each list, along with a selected-count badge and a per-job resource count. Resources also selected on another job **in the current unsaved plan** display an "Also selected in Job N" note. This is **not** authoritative availability across previously saved schedules, leave records, maintenance records, or external jobs. The assignment limit and at-least-one-resource requirements remain enforced by existing validation, and old ineligible foreman assignments stay visible and removable with a warning.
+
+Every job card offers the same **⋯ menu** for Duplicate Job / Remove Job; deletion requires confirmation. Job cards can be sorted using the sort selector and direction control without changing underlying saved/exported job order. The page remains responsive and follows the navy/steel-blue design. Save, Edit and Excel export still use the existing API payloads and database schema; no additional dependencies or database migrations are required. Vercel auto-deploy remains disabled; deploy changes manually.
