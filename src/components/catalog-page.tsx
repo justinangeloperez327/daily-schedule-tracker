@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ClipboardList, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ClipboardList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
 import type { CatalogKind } from "@/lib/catalog";
 import { catalogConfigs, emptyCatalogDraft } from "@/lib/catalog-config";
 import { apiRequest } from "@/lib/http";
@@ -21,7 +22,7 @@ type CatalogRow = { id: string; [key: string]: unknown };
 
 // Keep these project values in the database, forms and Excel workflows.
 // Hiding them is a directory-display decision only.
-const hiddenProjectColumns = new Set(["rev", "paymentTerms", "contractValue"]);
+const hiddenProjectColumns = new Set(["rev", "paymentTerms", "contractValue", "soNo", "descriptions"]);
 
 function getValue(record: CatalogRow, key: string): string {
   const value = record[key];
@@ -40,6 +41,9 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
   const [formError, setFormError] = React.useState("");
+  const [deleteTarget, setDeleteTarget] = React.useState<CatalogRow | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<Record<string, string>>(() => emptyCatalogDraft(kind));
@@ -122,17 +126,23 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
     }
   }
 
-  async function remove(record: CatalogRow) {
-    const title = getValue(record, "name") || getValue(record, "vehicleDetails") || getValue(record, "employeeCode") || record.id;
-    if (!window.confirm("Delete " + title + "? This cannot be undone.")) return;
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return;
+    const id = deleteTarget.id;
+    setDeleting(true);
+    setDeleteError("");
     try {
-      await apiRequest<{ success: true }>("/api/" + kind + "/" + encodeURIComponent(record.id), {
+      await apiRequest<{ success: true }>("/api/" + kind + "/" + encodeURIComponent(id), {
         method: "DELETE",
       });
-      setRecords((current) => current.filter((item) => item.id !== record.id));
+      setRecords((current) => current.filter((item) => item.id !== id));
       setError("");
+      setDeleteTarget(null);
+      setNotice(config.singular + " deleted.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to delete record.");
+      setDeleteError(cause instanceof Error ? cause.message : "Unable to delete record.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -201,17 +211,17 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
         <p className="px-3 py-2 text-xs text-muted-foreground sm:hidden">
           Scroll the table sideways to view all columns.
         </p>
-        <Table className={kind === "projects" ? "min-w-[1820px] table-auto" : "min-w-[960px] table-auto"}>
+        <Table className={kind === "projects" ? "min-w-[1240px] table-auto" : "min-w-[960px] table-auto"}>
           <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
               {visibleFields.map((field) => (
                 <TableHead key={field.key} className={
-                  ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
+                  ["name", "clientName", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
                     ? "h-9 min-w-[220px] px-4 py-1.5"
                     : "h-9 min-w-[116px] px-4 py-1.5"
                 }>{field.label}</TableHead>
               ))}
-              <TableHead className="h-9 min-w-[130px] px-4 py-1.5 text-right">Actions</TableHead>
+              <TableHead className="h-9 w-[78px] min-w-[78px] px-4 py-1.5 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -248,20 +258,13 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                   </TableCell>
                 ))}
                 <TableCell className={(density === "comfortable" ? "py-0.5" : "py-0") + " px-3.5 align-top"}>
-                  <div className="flex flex-nowrap justify-end gap-1">
-                    {kind === "projects" && (
-                      <Button asChild size="icon-sm" variant="ghost" className="size-7">
-                        <Link href={"/projects/" + encodeURIComponent(record.id)} aria-label={"View full project " + getValue(record, "name")} title="View full project">
-                          <Eye className="size-3.5" />
-                        </Link>
-                      </Button>
-                    )}
-                    <Button size="icon-sm" variant="ghost" className="size-7" aria-label={"Edit record " + record.id} title="Edit record" onClick={() => edit(record)}>
-                      <Pencil className="size-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 px-1.5 text-destructive hover:text-destructive" aria-label={"Delete record " + record.id} onClick={() => remove(record)}>
-                      <Trash2 className="size-3.5" /> Delete
-                    </Button>
+                  <div className="flex justify-end">
+                    <RowActionsMenu
+                      itemName={getValue(record, "name") || getValue(record, "vehicleDetails") || record.id}
+                      viewHref={kind === "projects" ? "/projects/" + encodeURIComponent(record.id) : undefined}
+                      onEdit={() => edit(record)}
+                      onDelete={() => { setDeleteTarget(record); setDeleteError(""); }}
+                    />
                   </div>
                 </TableCell>
               </TableRow>
@@ -290,6 +293,40 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
           disabled={loading}
         />
       </section>
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteTarget(null);
+            setDeleteError("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete {config.singular.toLowerCase()}</DialogTitle>
+            <DialogDescription>
+              Delete {deleteTarget && (
+                getValue(deleteTarget, "name") || getValue(deleteTarget, "vehicleDetails") || deleteTarget.id
+              )}? This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-destructive">
+              {deleteError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={deleting} onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" disabled={deleting} onClick={confirmDelete}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={(next) => { if (!saving) setDialogOpen(next); }}>
         <DialogContent className="sm:max-w-[720px]">
