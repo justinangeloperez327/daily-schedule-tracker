@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Download, Plus, Save, Trash2 } from "lucide-react";
 import { SearchCombobox, type ComboboxOption } from "@/components/ui/search-combobox";
 import { Button } from "@/components/ui/button";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { SortableTableHead, type TableSortDirection } from "@/components/ui/sortable-table-head";
+import { compareTableValues } from "@/lib/table-sort";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +22,7 @@ import { dateKey, dateLabel } from "@/lib/schedule";
 
 type AssignmentSlot = { key: string; resourceId: string };
 type SlotField = "foremanSlots" | "labourSlots" | "equipmentSlots";
+type EditorSortKey = "original" | "job" | "foremen" | "labours" | "equipment" | "shift" | "scope" | "time";
 type EditorRow = Omit<DispatchEntry, "foremanIds" | "employeeIds" | "equipmentIds"> & {
   key: string;
   foremanSlots: AssignmentSlot[];
@@ -73,6 +80,10 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const [error, setError] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
+  const [removeTarget, setRemoveTarget] = React.useState<string | null>(null);
+  const [sort, setSort] = React.useState<{ key: EditorSortKey; direction: TableSortDirection }>({
+    key: "original", direction: "asc",
+  });
 
   React.useEffect(() => {
     let active = true;
@@ -138,6 +149,54 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
 
   function selectedIds(row: EditorRow, field: SlotField): string[] {
     return row[field].map((slot) => slot.resourceId).filter(Boolean);
+  }
+
+  function sortBy(key: EditorSortKey) {
+    setSort((previous) => ({
+      key,
+      direction: previous.key === key && previous.direction === "asc" ? "desc" : "asc",
+    }));
+  }
+
+  function duplicateJob(rowKey: string) {
+    if (saving) return;
+    setRows((current) => current.flatMap((row) => {
+      if (row.key !== rowKey) return [row];
+      return [row, {
+        ...row,
+        id: undefined,
+        key: crypto.randomUUID(),
+        foremanSlots: row.foremanSlots.map((slot) => assignmentSlot(slot.resourceId)),
+        labourSlots: row.labourSlots.map((slot) => assignmentSlot(slot.resourceId)),
+        equipmentSlots: row.equipmentSlots.map((slot) => assignmentSlot(slot.resourceId)),
+      }];
+    }));
+    setError("");
+  }
+
+  // A sorted table is only a view over rows: saving/exporting preserve original
+  // schedule job order and every selector remains attached to its stable row key.
+  const displayedRows = rows.map((row, index) => ({ row, index }));
+  if (sort.key !== "original" || sort.direction === "desc") {
+    const sortValue = (row: EditorRow, index: number): string | number => {
+      switch (sort.key) {
+        case "original": return index;
+        case "job": {
+          const project = projects.find((item) => item.id === row.projectId);
+          return project?.jobNo || project?.name || "";
+        }
+        case "foremen": return row.foremanSlots.filter((slot) => slot.resourceId).length;
+        case "labours": return row.labourSlots.filter((slot) => slot.resourceId).length;
+        case "equipment": return row.equipmentSlots.filter((slot) => slot.resourceId).length;
+        case "shift": return row.shift;
+        case "scope": return row.scope;
+        case "time": return row.timeIn;
+      }
+    };
+    displayedRows.sort((a, b) =>
+      compareTableValues(sortValue(a.row, a.index), sortValue(b.row, b.index), sort.direction) ||
+      a.index - b.index
+    );
   }
 
   const projectOptions: ComboboxOption[] = projects.map((project) => ({
@@ -381,19 +440,30 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           </colgroup>
           <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
-              <TableHead className="h-9 w-[55px] pl-4">#</TableHead>
-              <TableHead className="w-[380px]">Select Job</TableHead>
-              <TableHead className="w-[285px]">Foremen *</TableHead>
-              <TableHead className="w-[285px]">Labours *</TableHead>
-              <TableHead className="w-[285px]">Equipment *</TableHead>
-              <TableHead className="w-[115px]">Day / Night</TableHead>
-              <TableHead className="w-[215px]">Scope</TableHead>
-              <TableHead className="w-[236px]">Time</TableHead>
-              <TableHead className="h-9 w-[85px] pr-4 text-right">Action</TableHead>
+              {([
+                ["original", "#", "w-[55px] pl-4", "Original job order (sorting does not change saved order)"],
+                ["job", "Select Job", "w-[380px]", "Sort by job number or project name"],
+                ["foremen", "Foremen *", "w-[285px]", "Sort by number of foremen selected"],
+                ["labours", "Labours *", "w-[285px]", "Sort by number of labourers selected"],
+                ["equipment", "Equipment *", "w-[285px]", "Sort by number of equipment items selected"],
+                ["shift", "Day / Night", "w-[115px]", "Sort by shift"],
+                ["scope", "Scope", "w-[215px]", "Sort by scope"],
+                ["time", "Time", "w-[236px]", "Sort by start time"],
+              ] as const).map(([key, label, width, title]) => (
+                <SortableTableHead
+                  key={key}
+                  label={label}
+                  direction={sort.key === key ? sort.direction : undefined}
+                  onSort={() => sortBy(key)}
+                  className={width}
+                  title={title}
+                />
+              ))}
+              <TableHead className="h-9 w-[85px] pr-4 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!loading && rows.map((row, index) => {
+            {!loading && displayedRows.map(({ row, index }) => {
               const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
               const selectedProject = projects.find((project) => project.id === row.projectId);
               return (
@@ -459,11 +529,15 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                     ))}
                   </TableCell>
                   <TableCell className="pr-4 py-2 text-right align-top">
-                    <Button size="icon-sm" variant="ghost" className="text-destructive hover:text-destructive"
-                      aria-label={"Remove dispatch row " + (index + 1)}
-                      onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}>
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <div className="flex justify-end">
+                      <RowActionsMenu
+                        itemName={"dispatch job " + (index + 1)}
+                        onDuplicate={() => duplicateJob(row.key)}
+                        onDelete={() => setRemoveTarget(row.key)}
+                        deleteLabel="Remove job"
+                        disabled={saving}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -493,6 +567,27 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         </Button>
       </div>
 
+      <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open && !saving) setRemoveTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove job</DialogTitle>
+            <DialogDescription>
+              Remove this job and its assigned foremen, labourers, and equipment from
+              the current schedule? This change is saved when you save the schedule.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setRemoveTarget(null)}>Cancel</Button>
+            <Button variant="destructive" type="button" onClick={() => {
+              setRows((current) => current.filter((row) => row.key !== removeTarget));
+              setRemoveTarget(null);
+              setError("");
+            }}>
+              Remove job
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
