@@ -108,7 +108,7 @@ export function EmployeeRowActions({ employeeName, onEdit, onDelete }: Props) {
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground outline-none hover:bg-[#EAF3FF] focus-visible:bg-[#EAF3FF]"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground outline-none hover:bg-[var(--table-hover)] focus-visible:bg-[var(--table-hover)]"
             onClick={() => closeAndRun(onEdit)}
           >
             <Pencil aria-hidden="true" className="size-4" /> Edit

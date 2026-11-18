@@ -29,7 +29,7 @@ export function SiteHeader() {
           "inline-flex items-center rounded-md px-3 text-sm font-medium transition-colors",
           isMobile ? "min-h-11 w-full" : "h-9 shrink-0",
           active
-            ? "bg-[#f1f3f5] text-foreground"
+            ? "bg-accent text-primary shadow-[inset_0_-2px_0_#365F91]"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
@@ -39,14 +39,17 @@ export function SiteHeader() {
   });
 
   return (
-    <header className="relative z-40 border-b border-border bg-white">
+    <header className="relative z-40 border-b border-border bg-white/95">
       <div className="flex w-full min-w-0 items-center justify-between gap-3 px-3 sm:px-6 lg:px-8 2xl:px-10">
         <Link href="/schedules" className="flex h-14 min-w-0 shrink items-center gap-2.5 sm:h-16 sm:gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#20262e] text-white">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-white">
             <CalendarDays className="size-[18px]" />
           </span>
-          <span className="truncate text-sm font-semibold tracking-tight sm:text-base">
-            Daily Schedule Tracker
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold tracking-[-0.03em] text-primary sm:text-base">
+              Daily Schedule Tracker
+            </span>
+            <span className="technical-eyebrow hidden sm:block">Operations / Dispatch</span>
           </span>
         </Link>
         <nav aria-label="Main navigation" className="hidden min-w-0 flex-1 flex-wrap items-center justify-end gap-1 md:flex">

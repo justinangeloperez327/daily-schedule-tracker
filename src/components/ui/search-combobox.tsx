@@ -175,8 +175,8 @@ export function SearchCombobox({ label, value, onValueChange, options, placehold
                 className={cn(
                   "flex min-h-10 items-start justify-between gap-3 rounded-md px-3 py-2",
                   "text-sm transition-colors",
-                  option.disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-[#EAF3FF]",
-                  !option.disabled && index === activeIndex && "bg-[#EAF3FF]"
+                  option.disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-[var(--table-hover)]",
+                  !option.disabled && index === activeIndex && "bg-[var(--table-hover)]"
                 )}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(option)}
