@@ -246,7 +246,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       </Link>
       <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-center">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight">{sheetId ? "Edit Schedule" : "Create Schedule"}</h1>
+          <p className="technical-eyebrow mb-1.5">OPERATIONS / SCHEDULES / DISPATCH</p>
+          <h1 className="text-[28px] font-semibold tracking-tight text-primary">{sheetId ? "Edit Schedule" : "Create Schedule"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Assign jobs, foremen, labours, and working times for each dispatch team.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -291,9 +292,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           Scroll the dispatch table sideways to assign jobs, teams, equipment, shifts and times.
         </p>
         <Table className="min-w-[1720px] table-auto">
-          <TableHeader className="bg-[#f8f9fa]">
+          <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
-              <TableHead className="h-9 w-[55px] pl-3">#</TableHead>
+              <TableHead className="h-9 w-[55px] pl-4">#</TableHead>
               <TableHead className="min-w-[275px]">Select Job</TableHead>
               <TableHead className="min-w-[275px]">Foremen *</TableHead>
               <TableHead className="min-w-[275px]">Labours *</TableHead>
@@ -301,7 +302,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               <TableHead className="min-w-[120px]">Day / Night</TableHead>
               <TableHead className="min-w-[210px]">Scope</TableHead>
               <TableHead className="min-w-[235px]">Time</TableHead>
-              <TableHead className="h-9 w-[85px] pr-3 text-right">Action</TableHead>
+              <TableHead className="h-9 w-[85px] pr-4 text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -309,7 +310,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
               return (
                 <TableRow key={row.key} className="align-top">
-                  <TableCell className="pl-3 py-2 align-top font-medium text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="pl-4 py-2 align-top font-medium text-muted-foreground">{index + 1}</TableCell>
                   <TableCell className="py-2 align-top">
                     <SearchCombobox
                       label={"Job for dispatch " + (index + 1)}
@@ -471,7 +472,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       </div>
                     ))}
                   </TableCell>
-                  <TableCell className="pr-3 py-2 text-right align-top">
+                  <TableCell className="pr-4 py-2 text-right align-top">
                     <Button size="icon-sm" variant="ghost" className="text-destructive hover:text-destructive"
                       aria-label={"Remove dispatch row " + (index + 1)}
                       onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}>
@@ -518,7 +519,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             {matches.map((item) => {
               const checked = !!picker && !!pickerRow && pickerRow[picker.field].includes(item.id);
               return <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60">
-                <input className="size-4 accent-[#20262e]" type="checkbox" checked={checked}
+                <input className="size-4 accent-[#365F91]" type="checkbox" checked={checked}
                   onChange={() => { if (picker) toggleResource(picker.rowKey, picker.field, item.id); }} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{item.name}</span>

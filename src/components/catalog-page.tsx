@@ -135,7 +135,8 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
     <main className="w-full min-w-0 max-w-none px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
       <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-center">
         <div>
-          <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">
+          <p className="technical-eyebrow mb-1.5">{"MASTER DATA / " + config.title.toUpperCase()}</p>
+          <h1 className="text-[27px] font-semibold tracking-[-0.04em] text-primary sm:text-[32px]">
             {config.title}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{config.subtitle}</p>
@@ -153,7 +154,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
         <div className="flex flex-col items-stretch justify-between gap-3 border-b border-border px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
           <div>
             <h2 className="text-base font-semibold">{config.title} directory</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 font-mono text-[11px] text-muted-foreground">
               {records.length} {records.length === 1 ? "record" : "records"}
             </p>
           </div>
@@ -186,16 +187,16 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
           Scroll the table sideways to view all columns.
         </p>
         <Table className={kind === "projects" ? "min-w-[1840px] table-auto" : "min-w-[960px] table-auto"}>
-          <TableHeader className="bg-[#f8f9fa]">
+          <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
               {config.fields.map((field) => (
                 <TableHead key={field.key} className={
                   ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
-                    ? "h-9 min-w-[220px] px-2.5 py-1.5"
-                    : "h-9 min-w-[116px] px-2.5 py-1.5"
+                    ? "h-9 min-w-[220px] px-4 py-1.5"
+                    : "h-9 min-w-[116px] px-4 py-1.5"
                 }>{field.label}</TableHead>
               ))}
-              <TableHead className="h-9 min-w-[130px] px-2.5 py-1.5 text-right">Actions</TableHead>
+              <TableHead className="h-9 min-w-[130px] px-4 py-1.5 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -205,7 +206,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                   <TableCell
                     key={field.key}
                     className={(density === "comfortable" ? "py-0.5" : "py-0") +
-                      " min-w-[116px] max-w-[360px] px-2.5 align-middle text-sm leading-5 text-[#545b64]"}
+                      " min-w-[116px] max-w-[360px] px-4 align-middle text-sm leading-5 text-[#50677F]"}
                     title={getValue(record, field.key)}
                   >
                     <span className="block max-w-[340px] truncate">
@@ -213,7 +214,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                     </span>
                   </TableCell>
                 ))}
-                <TableCell className={(density === "comfortable" ? "py-0.5" : "py-0") + " px-2.5 align-middle"}>
+                <TableCell className={(density === "comfortable" ? "py-0.5" : "py-0") + " px-3.5 align-middle"}>
                   <div className="flex flex-nowrap justify-end gap-1">
                     <Button size="icon-sm" variant="ghost" className="size-7" aria-label={"Edit record " + record.id} title="Edit record" onClick={() => edit(record)}>
                       <Pencil className="size-3.5" />

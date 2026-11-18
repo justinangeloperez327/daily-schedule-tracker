@@ -61,7 +61,8 @@ export function ScheduleTracker() {
     <main className="w-full min-w-0 max-w-none px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
       <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:flex-row sm:flex-wrap sm:items-center">
         <div>
-          <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">Schedules</h1>
+          <p className="technical-eyebrow mb-1.5">OPERATIONS / SCHEDULES</p>
+          <h1 className="text-[27px] font-semibold tracking-[-0.04em] text-primary sm:text-[32px]">Schedules</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Manage daily work plans and dispatch teams in one register.
           </p>
@@ -121,20 +122,20 @@ export function ScheduleTracker() {
           Scroll the table sideways to see every schedule column.
         </p>
         <Table className="min-w-[840px] table-fixed">
-          <TableHeader className="bg-[#f8f9fa]">
+          <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
-              <TableHead className="h-9 w-[24%] whitespace-nowrap pl-3">Schedule date</TableHead>
+              <TableHead className="h-9 w-[24%] whitespace-nowrap pl-4">Schedule date</TableHead>
               <TableHead className="h-9 w-[9%] whitespace-nowrap">Jobs</TableHead>
               <TableHead className="h-9 w-[15%] whitespace-nowrap">Team dispatches</TableHead>
               <TableHead className="h-9 w-[17%] whitespace-nowrap">Day / Night</TableHead>
               <TableHead className="h-9 w-[19%] whitespace-nowrap">Last updated</TableHead>
-              <TableHead className="h-9 w-[16%] whitespace-nowrap pr-3 text-right">Actions</TableHead>
+              <TableHead className="h-9 w-[16%] whitespace-nowrap pr-4 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!loading && filtered.map((sheet) => (
               <TableRow key={sheet.id} className={density === "comfortable" ? "h-9" : "h-8"}>
-                <TableCell className="pl-3">
+                <TableCell className="pl-4">
                   <Link href={"/schedules/" + sheet.id} className="inline-flex items-center gap-2 font-semibold hover:underline">
                     <CalendarDays className="size-4 text-muted-foreground" />
                     {dateLabel(sheet.date)}
@@ -146,7 +147,7 @@ export function ScheduleTracker() {
                 <TableCell className="text-xs text-muted-foreground">
                   {new Date(sheet.updatedAt).toLocaleString("en-AE", { dateStyle: "medium", timeStyle: "short" })}
                 </TableCell>
-                <TableCell className="pr-3">
+                <TableCell className="pr-4">
                   <div className="flex flex-nowrap justify-end gap-1">
                     <Button variant="outline" size="sm" className="h-7 px-2" asChild>
                       <Link href={"/schedules/" + sheet.id}><ExternalLink className="size-3.5" /> Open</Link>
@@ -180,7 +181,7 @@ export function ScheduleTracker() {
             )}
           </TableBody>
         </Table>
-        <div className="border-t px-6 py-3 text-xs text-muted-foreground">
+        <div className="border-t px-4 py-3 font-mono text-[11px] text-muted-foreground sm:px-6">
           Showing {loading ? 0 : filtered.length} of {sheets.length} schedules
         </div>
       </section>

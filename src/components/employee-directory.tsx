@@ -234,21 +234,22 @@ export function EmployeeDirectory() {
     const text = key === "employeeCode" ? employee.employeeCode ?? "" : String(employee[key] ?? "");
     if (!text) return <span className="text-muted-foreground">—</span>;
     if (key === "name") {
-      return <span className="block truncate font-semibold text-[#20262e]" title={employee.remarks ? employee.name + " — Remarks: " + employee.remarks : employee.name}>{text}</span>;
+      return <span className="block truncate font-semibold text-primary" title={employee.remarks ? employee.name + " — Remarks: " + employee.remarks : employee.name}>{text}</span>;
     }
-    return <span className={"block truncate " + (key === "employeeCode" ? "font-mono tabular-nums font-medium text-[#374151]" : "text-[#545b64]")} title={text}>{text}</span>;
+    return <span className={"block truncate " + (key === "employeeCode" ? "font-mono tabular-nums font-medium text-[#365F91]" : "text-[#50677F]")} title={text}>{text}</span>;
   }
 
   // A fixed 48px row height kept the directory tall even with smaller padding.
   // The 28px actions trigger fits inside both heights without inflating them.
   const rowHeight = density === "comfortable" ? "h-9" : "h-8";
-  const padding = density === "comfortable" ? "px-2.5 py-0.5" : "px-2.5 py-0";
+  const padding = density === "comfortable" ? "px-4 py-0.5" : "px-4 py-0";
 
   return (
-    <main className="min-h-[calc(100vh-64px)] w-full min-w-0 bg-[#f6f7f9] px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
+    <main className="min-h-[calc(100vh-64px)] w-full min-w-0 bg-background px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[27px] font-semibold tracking-[-0.04em] sm:text-[32px]">Employees</h1>
+          <p className="technical-eyebrow mb-1.5">MASTER DATA / EMPLOYEES</p>
+          <h1 className="text-[27px] font-semibold tracking-[-0.04em] text-primary sm:text-[32px]">Employees</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">Employee register with designations, locations and joining details.</p>
         </div>
         <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -263,7 +264,7 @@ export function EmployeeDirectory() {
         <div className="flex flex-col gap-4 border-b border-border px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
           <div>
             <h2 className="text-base font-semibold">Employee directory</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 font-mono text-[11px] text-muted-foreground">
               {filtered.length} {filtered.length === 1 ? "record" : "records"}
               {hasFilters && <span> matching filters · {employees.length} total</span>}
             </p>
@@ -307,7 +308,7 @@ export function EmployeeDirectory() {
                       disabled={column.required}
                       checked={columnVisible(column)}
                       onChange={(event) => setVisibleOverrides((prev) => ({ ...prev, [column.key]: event.target.checked }))}
-                      className="size-4 accent-[#20262e]"
+                      className="size-4 accent-[#365F91]"
                     />
                     {column.label}
                   </label>
@@ -321,7 +322,7 @@ export function EmployeeDirectory() {
         <div className="grid grid-cols-2 gap-2 border-b border-border px-3 py-3 sm:flex sm:flex-wrap sm:items-end sm:gap-3 sm:px-6">
           <SlidersHorizontal aria-hidden="true" className="mb-2.5 hidden size-4 text-muted-foreground sm:block" />
           {(["designation", "location", "category", "status"] as FilterKey[]).map((key) => (
-            <label key={key} className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[#545b64] sm:min-w-[142px]">
+            <label key={key} className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[#50677F] sm:min-w-[142px]">
               {key === "designation" ? "Designation" : key === "location" ? "Location" : key === "category" ? "Category" : "Status"}
               <select
                 value={filters[key]}
@@ -354,7 +355,7 @@ export function EmployeeDirectory() {
             ))}
             <col style={{ width: 80 }} />
           </colgroup>
-          <TableHeader className="bg-[#f8f9fa]">
+          <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
               {displayedColumns.map((column) => {
                 const sorted = sort.key === column.key;
@@ -363,12 +364,12 @@ export function EmployeeDirectory() {
                     key={column.key}
                     scope="col"
                     aria-sort={sorted ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
-                    className="h-9 px-2.5 py-1 text-[11px] font-semibold tracking-[0.045em] text-[#48515e]"
+                    className="h-9 px-4 py-1 font-mono text-[11px] font-semibold tracking-[0.045em] text-[#50677F]"
                   >
                     <button
                       type="button"
                       aria-label={"Sort by " + column.label + (sorted && sort.direction === "asc" ? " descending" : " ascending")}
-                      className="inline-flex w-full items-center gap-1.5 text-left uppercase outline-none hover:text-[#1f2937] focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/30"
+                      className="inline-flex w-full items-center gap-1.5 text-left uppercase outline-none hover:text-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/30"
                       onClick={() => updateSort(column.key)}
                     >
                       <span className="min-w-0 break-words">{column.label}</span>
@@ -379,12 +380,12 @@ export function EmployeeDirectory() {
                   </TableHead>
                 );
               })}
-              <TableHead scope="col" className="h-9 px-2 py-1 text-right text-[11px] font-semibold tracking-[0.045em] text-[#48515e]">Actions</TableHead>
+              <TableHead scope="col" className="h-9 px-3 py-1 text-right font-mono text-[11px] font-semibold tracking-[0.045em] text-[#50677F]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!loading && visibleRows.map((employee) => (
-              <TableRow key={employee.id} className={rowHeight + " hover:bg-[#EAF3FF] focus-within:bg-[#EDF5FF]"}>
+              <TableRow key={employee.id} className={rowHeight + " hover:bg-[var(--table-hover)] focus-within:bg-[var(--table-focus)]"}>
                 {displayedColumns.map((column) => (
                   <TableCell key={column.key} className={padding + " min-w-0 max-w-0 align-middle text-sm leading-5"}>
                     {renderValue(employee, column.key)}
@@ -425,7 +426,7 @@ export function EmployeeDirectory() {
         </Table>
 
         <div className="flex flex-col gap-3 border-t border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+          <p className="technical-number text-xs text-muted-foreground" aria-live="polite">
             Showing {start}–{end} of {filtered.length}
           </p>
           <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
@@ -442,7 +443,7 @@ export function EmployeeDirectory() {
                 <option value={50}>50</option>
               </select>
             </label>
-            <span className="text-xs text-muted-foreground tabular-nums">Page {activePage} of {totalPages}</span>
+            <span className="technical-number text-xs text-muted-foreground">Page {activePage} of {totalPages}</span>
             <Button
               variant="outline" size="icon-sm" title="Previous page" aria-label="Previous page"
               disabled={activePage <= 1 || loading}
