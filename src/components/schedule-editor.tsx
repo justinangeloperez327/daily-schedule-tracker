@@ -48,7 +48,7 @@ function SelectField({ label, value, onChange, children }: {
   label: string; value: string; onChange: (value: string) => void; children: React.ReactNode;
 }) {
   return <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}
-    className="h-10 w-full min-w-0 rounded-md border border-input bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30">
+    className="h-9 w-full min-w-0 rounded-md border border-input bg-white px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/30">
     {children}
   </select>;
 }
@@ -292,8 +292,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         </p>
         <Table className="min-w-[1720px] table-auto">
           <TableHeader className="bg-[#f8f9fa]">
-            <TableRow>
-              <TableHead className="w-[55px] pl-5">#</TableHead>
+            <TableRow className="h-9">
+              <TableHead className="h-9 w-[55px] pl-3">#</TableHead>
               <TableHead className="min-w-[275px]">Select Job</TableHead>
               <TableHead className="min-w-[275px]">Foremen *</TableHead>
               <TableHead className="min-w-[275px]">Labours *</TableHead>
@@ -301,7 +301,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               <TableHead className="min-w-[120px]">Day / Night</TableHead>
               <TableHead className="min-w-[210px]">Scope</TableHead>
               <TableHead className="min-w-[235px]">Time</TableHead>
-              <TableHead className="w-[85px] pr-5 text-right">Action</TableHead>
+              <TableHead className="h-9 w-[85px] pr-3 text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -309,8 +309,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
               return (
                 <TableRow key={row.key} className="align-top">
-                  <TableCell className="pl-5 pt-5 font-medium text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell className="pt-4">
+                  <TableCell className="pl-3 py-2 align-top font-medium text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="py-2 align-top">
                     <SearchCombobox
                       label={"Job for dispatch " + (index + 1)}
                       value={row.projectId}
@@ -324,8 +324,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       {projects.find((p) => p.id === row.projectId)?.clientName || "Client not specified"}
                     </p>}
                   </TableCell>
-                  <TableCell className="min-w-[260px] py-4 align-top">
-                    <div className="space-y-2.5">
+                  <TableCell className="min-w-[260px] py-2 align-top">
+                    <div className="space-y-1.5">
                       {row.foremanSlots.map((slot, slotIndex) => (
                         <div key={slot.key} className="flex min-w-0 items-center gap-1.5">
                           <div className="min-w-0 flex-1">
@@ -378,8 +378,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell className="min-w-[260px] py-4 align-top">
-                    <div className="space-y-2.5">
+                  <TableCell className="min-w-[260px] py-2 align-top">
+                    <div className="space-y-1.5">
                       {row.labourSlots.map((slot, slotIndex) => (
                         <div key={slot.key} className="flex min-w-0 items-center gap-1.5">
                           <div className="min-w-0 flex-1">
@@ -432,21 +432,21 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell className="min-w-[190px] py-4 align-top">
-                    <Button variant="outline" className="h-auto min-h-10 w-full items-start justify-between gap-2 whitespace-normal px-3 py-2 text-left font-normal"
+                  <TableCell className="min-w-[190px] py-2 align-top">
+                    <Button variant="outline" className="h-auto min-h-9 w-full items-start justify-between gap-2 whitespace-normal px-2.5 py-1.5 text-left font-normal"
                       onClick={() => openPicker(row, "equipmentIds")}>
                       <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenEquipmentNames(row)}</span>
                       <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
                     </Button>
                     <p className="mt-1 text-[11px] text-muted-foreground">{row.equipmentIds.length} selected · minimum 1</p>
                   </TableCell>
-                  <TableCell className="pt-4">
+                  <TableCell className="py-2 align-top">
                     <SelectField label={"Shift for dispatch " + (index + 1)} value={row.shift}
                       onChange={(value) => patch(row.key, "shift", value as DispatchEntry["shift"])}>
                       <option value="Day">Day</option><option value="Night">Night</option>
                     </SelectField>
                   </TableCell>
-                  <TableCell className="pt-4">
+                  <TableCell className="py-2 align-top">
                     <SelectField label={"Scope for dispatch " + (index + 1)}
                       value={customScope ? "__other__" : row.scope}
                       onChange={(value) => patch(row.key, "scope", value === "__other__" ? "Other" : value)}>
@@ -458,20 +458,20 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       aria-label={"Custom scope for dispatch " + (index + 1)} placeholder="Describe scope..."
                       onChange={(event) => patch(row.key, "scope", event.target.value)} />}
                   </TableCell>
-                  <TableCell className="space-y-2 py-3">
+                  <TableCell className="space-y-1 py-2">
                     {([
                       ["campStart", "Camp start"],
                       ["timeIn", "Start time"],
                       ["timeOut", "End time"],
                     ] as const).map(([field, label]) => (
-                      <div key={field} className="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-2">
+                      <div key={field} className="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-1.5">
                         <label className="text-[11px] text-muted-foreground" htmlFor={row.key + field}>{label}</label>
                         <Input id={row.key + field} type="time" value={row[field]}
-                          onChange={(event) => patch(row.key, field, event.target.value)} className="h-9 min-w-0 w-full px-2 text-xs" />
+                          onChange={(event) => patch(row.key, field, event.target.value)} className="h-8 min-w-0 w-full px-2 text-xs" />
                       </div>
                     ))}
                   </TableCell>
-                  <TableCell className="pr-5 pt-4 text-right">
+                  <TableCell className="pr-3 py-2 text-right align-top">
                     <Button size="icon-sm" variant="ghost" className="text-destructive hover:text-destructive"
                       aria-label={"Remove dispatch row " + (index + 1)}
                       onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))}>
