@@ -28,6 +28,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const [density, setDensity] = React.useState<"comfortable" | "compact">("comfortable");
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
   const [formError, setFormError] = React.useState("");
@@ -156,6 +157,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
               {records.length} {records.length === 1 ? "record" : "records"}
             </p>
           </div>
+          <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="relative w-full min-w-0 sm:w-[260px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -166,48 +168,57 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
+          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            Density
+            <select
+              value={density}
+              onChange={(event) => setDensity(event.target.value as "comfortable" | "compact")}
+              aria-label={config.title + " table density"}
+              className="h-9 rounded-md border border-input bg-white px-2 text-sm text-foreground"
+            >
+              <option value="comfortable">Comfortable</option>
+              <option value="compact">Compact</option>
+            </select>
+          </label>
+          </div>
         </div>
         <p className="px-3 py-2 text-xs text-muted-foreground sm:hidden">
           Scroll the table sideways to view all columns.
         </p>
-        <Table className={kind === "projects" ? "min-w-[1840px] table-auto" : kind === "employees" ? "min-w-[1050px] table-auto" : "min-w-[960px] table-auto"}>
+        <Table className={kind === "projects" ? "min-w-[1840px] table-auto" : "min-w-[960px] table-auto"}>
           <TableHeader className="bg-[#f8f9fa]">
-            <TableRow>
+            <TableRow className="h-9">
               {config.fields.map((field) => (
                 <TableHead key={field.key} className={
-                  kind === "employees"
-                    ? "h-10 min-w-[125px] px-3 py-2 leading-4"
-                    : ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
-                      ? "min-w-[220px] px-4 py-3"
-                      : "min-w-[116px] px-4 py-3"
+                  ["name", "clientName", "descriptions", "paymentTerms", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
+                    ? "h-9 min-w-[220px] px-2.5 py-1.5"
+                    : "h-9 min-w-[116px] px-2.5 py-1.5"
                 }>{field.label}</TableHead>
               ))}
-              <TableHead className={kind === "employees" ? "h-10 min-w-[120px] px-3 py-2 text-right" : "min-w-[144px] pr-5 text-right"}>Actions</TableHead>
+              <TableHead className="h-9 min-w-[130px] px-2.5 py-1.5 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!loading && matches.map((record) => (
-              <TableRow key={record.id}>
+              <TableRow key={record.id} className={density === "comfortable" ? "h-9" : "h-8"}>
                 {config.fields.map((field) => (
                   <TableCell
                     key={field.key}
-                    className={kind === "employees"
-                      ? "min-w-[125px] max-w-[320px] px-3 py-1 align-middle text-sm leading-5 text-[#545b64]"
-                      : "min-w-[116px] max-w-[360px] px-4 py-4 whitespace-normal break-words [overflow-wrap:anywhere] text-[#545b64]"
-                    }
+                    className={(density === "comfortable" ? "py-0.5" : "py-0") +
+                      " min-w-[116px] max-w-[360px] px-2.5 align-middle text-sm leading-5 text-[#545b64]"}
                     title={getValue(record, field.key)}
                   >
-                    {kind === "employees"
-                      ? <span className="block max-w-full truncate">{getValue(record, field.key) || "—"}</span>
-                      : getValue(record, field.key) || "—"}
+                    <span className="block max-w-[340px] truncate">
+                      {getValue(record, field.key) || "—"}
+                    </span>
                   </TableCell>
                 ))}
-                <TableCell className={kind === "employees" ? "px-3 py-1 align-middle" : "pr-5"}>
-                  <div className={kind === "employees" ? "flex flex-nowrap justify-end gap-1" : "flex flex-wrap justify-end gap-2"}>
-                    <Button size="icon-sm" variant="ghost" aria-label={"Edit record " + record.id} onClick={() => edit(record)}>
+                <TableCell className={(density === "comfortable" ? "py-0.5" : "py-0") + " px-2.5 align-middle"}>
+                  <div className="flex flex-nowrap justify-end gap-1">
+                    <Button size="icon-sm" variant="ghost" className="size-7" aria-label={"Edit record " + record.id} title="Edit record" onClick={() => edit(record)}>
                       <Pencil className="size-3.5" />
                     </Button>
-                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" aria-label={"Delete record " + record.id} onClick={() => remove(record)}>
+                    <Button size="sm" variant="ghost" className="h-7 px-1.5 text-destructive hover:text-destructive" aria-label={"Delete record " + record.id} onClick={() => remove(record)}>
                       <Trash2 className="size-3.5" /> Delete
                     </Button>
                   </div>

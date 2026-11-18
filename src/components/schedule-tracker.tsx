@@ -25,6 +25,7 @@ export function ScheduleTracker() {
   const [error, setError] = React.useState("");
   const [dateFilter, setDateFilter] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [density, setDensity] = React.useState<"comfortable" | "compact">("comfortable");
   const [deleting, setDeleting] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -101,6 +102,18 @@ export function ScheduleTracker() {
             <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}
               aria-label="Filter by schedule date" className="w-full sm:w-40" />
             {dateFilter && <Button variant="ghost" size="sm" onClick={() => setDateFilter("")}>Clear</Button>}
+            <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              Density
+              <select
+                value={density}
+                onChange={(event) => setDensity(event.target.value as "comfortable" | "compact")}
+                aria-label="Schedule table density"
+                className="h-9 rounded-md border border-input bg-white px-2 text-sm text-foreground"
+              >
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+              </select>
+            </label>
           </div>
         </div>
 
@@ -109,19 +122,19 @@ export function ScheduleTracker() {
         </p>
         <Table className="min-w-[840px] table-fixed">
           <TableHeader className="bg-[#f8f9fa]">
-            <TableRow>
-              <TableHead className="w-[24%] pl-6">Schedule date</TableHead>
-              <TableHead className="w-[9%]">Jobs</TableHead>
-              <TableHead className="w-[15%]">Team dispatches</TableHead>
-              <TableHead className="w-[17%]">Day / Night</TableHead>
-              <TableHead className="w-[19%]">Last updated</TableHead>
-              <TableHead className="w-[16%] pr-6 text-right">Actions</TableHead>
+            <TableRow className="h-9">
+              <TableHead className="h-9 w-[24%] whitespace-nowrap pl-3">Schedule date</TableHead>
+              <TableHead className="h-9 w-[9%] whitespace-nowrap">Jobs</TableHead>
+              <TableHead className="h-9 w-[15%] whitespace-nowrap">Team dispatches</TableHead>
+              <TableHead className="h-9 w-[17%] whitespace-nowrap">Day / Night</TableHead>
+              <TableHead className="h-9 w-[19%] whitespace-nowrap">Last updated</TableHead>
+              <TableHead className="h-9 w-[16%] whitespace-nowrap pr-3 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!loading && filtered.map((sheet) => (
-              <TableRow key={sheet.id}>
-                <TableCell className="pl-6">
+              <TableRow key={sheet.id} className={density === "comfortable" ? "h-9" : "h-8"}>
+                <TableCell className="pl-3">
                   <Link href={"/schedules/" + sheet.id} className="inline-flex items-center gap-2 font-semibold hover:underline">
                     <CalendarDays className="size-4 text-muted-foreground" />
                     {dateLabel(sheet.date)}
@@ -133,12 +146,12 @@ export function ScheduleTracker() {
                 <TableCell className="text-xs text-muted-foreground">
                   {new Date(sheet.updatedAt).toLocaleString("en-AE", { dateStyle: "medium", timeStyle: "short" })}
                 </TableCell>
-                <TableCell className="pr-5">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <Button variant="outline" size="sm" asChild>
+                <TableCell className="pr-3">
+                  <div className="flex flex-nowrap justify-end gap-1">
+                    <Button variant="outline" size="sm" className="h-7 px-2" asChild>
                       <Link href={"/schedules/" + sheet.id}><ExternalLink className="size-3.5" /> Open</Link>
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive"
                       disabled={deleting === sheet.id} aria-label={"Delete schedule " + sheet.date}
                       onClick={() => remove(sheet)}>
                       <Trash2 className="size-3.5" /> Delete
