@@ -2,9 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CalendarDays, ClipboardList, Plus, Search, Trash2, ExternalLink } from "lucide-react";
+import { CalendarDays, ClipboardList, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RowActionsMenu } from "@/components/ui/row-actions-menu";
+import { SortableTableHead, type TableSortDirection } from "@/components/ui/sortable-table-head";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { compareTableValues } from "@/lib/table-sort";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { apiRequest } from "@/lib/http";
 import { dateLabel } from "@/lib/schedule";
@@ -19,6 +26,8 @@ type ScheduleSummary = {
   updatedAt: string;
 };
 
+type ScheduleSortKey = "date" | "jobs" | "teamDispatches" | "shift" | "updatedAt";
+
 export function ScheduleTracker() {
   const [sheets, setSheets] = React.useState<ScheduleSummary[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -27,6 +36,13 @@ export function ScheduleTracker() {
   const [search, setSearch] = React.useState("");
   const [density, setDensity] = React.useState<"comfortable" | "compact">("comfortable");
   const [deleting, setDeleting] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<ScheduleSummary | null>(null);
+  const [deleteError, setDeleteError] = React.useState("");
+  const [sort, setSort] = React.useState<{ key: ScheduleSortKey; direction: TableSortDirection }>({
+    key: "date", direction: "desc",
+  });
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
 
   React.useEffect(() => {
     let mounted = true;
@@ -37,21 +53,45 @@ export function ScheduleTracker() {
     return () => { mounted = false; };
   }, []);
 
-  const filtered = sheets.filter((sheet) =>
-    (!dateFilter || sheet.date === dateFilter) &&
-    (!search.trim() || dateLabel(sheet.date).toLowerCase().includes(search.trim().toLowerCase()))
-  );
+  const filtered = sheets
+    .filter((sheet) =>
+      (!dateFilter || sheet.date === dateFilter) &&
+      (!search.trim() || dateLabel(sheet.date).toLowerCase().includes(search.trim().toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (sort.key === "shift") {
+        return compareTableValues(a.day, b.day, sort.direction) ||
+          compareTableValues(a.night, b.night, sort.direction) ||
+          compareTableValues(a.date, b.date, "desc");
+      }
+      return compareTableValues(a[sort.key], b[sort.key], sort.direction) ||
+        compareTableValues(a.date, b.date, "desc") ||
+        compareTableValues(a.id, b.id, "asc");
+    });
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visibleRows = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  async function remove(sheet: ScheduleSummary) {
-    if (!window.confirm("Delete the entire schedule for " + dateLabel(sheet.date) +
-      "? All " + sheet.teamDispatches + " team dispatches in this schedule will be deleted.")) return;
-    setDeleting(sheet.id);
-    setError("");
+  function sortBy(key: ScheduleSortKey) {
+    setSort((previous) => ({
+      key,
+      direction: previous.key === key && previous.direction === "asc" ? "desc" : "asc",
+    }));
+    setPage(1);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return;
+    const id = deleteTarget.id;
+    setDeleting(id);
+    setDeleteError("");
     try {
-      await apiRequest<{ success: true }>("/api/schedules/" + encodeURIComponent(sheet.id), { method: "DELETE" });
-      setSheets((current) => current.filter((entry) => entry.id !== sheet.id));
+      await apiRequest<{ success: true }>("/api/schedules/" + encodeURIComponent(id), { method: "DELETE" });
+      setSheets((current) => current.filter((entry) => entry.id !== id));
+      setDeleteTarget(null);
+      setError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to delete schedule.");
+      setDeleteError(cause instanceof Error ? cause.message : "Unable to delete schedule.");
     } finally {
       setDeleting(null);
     }
@@ -97,12 +137,12 @@ export function ScheduleTracker() {
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <div className="relative w-full sm:w-auto">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)}
+              <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 placeholder="Search dates..." aria-label="Search schedules by date" className="w-full pl-9 sm:w-48" />
             </div>
-            <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}
+            <Input type="date" value={dateFilter} onChange={(event) => { setDateFilter(event.target.value); setPage(1); }}
               aria-label="Filter by schedule date" className="w-full sm:w-40" />
-            {dateFilter && <Button variant="ghost" size="sm" onClick={() => setDateFilter("")}>Clear</Button>}
+            {dateFilter && <Button variant="ghost" size="sm" onClick={() => { setDateFilter(""); setPage(1); }}>Clear</Button>}
             <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               Density
               <select
@@ -124,16 +164,27 @@ export function ScheduleTracker() {
         <Table className="min-w-[840px] table-fixed">
           <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
-              <TableHead className="h-9 w-[24%] whitespace-nowrap pl-4">Schedule date</TableHead>
-              <TableHead className="h-9 w-[9%] whitespace-nowrap">Jobs</TableHead>
-              <TableHead className="h-9 w-[15%] whitespace-nowrap">Team dispatches</TableHead>
-              <TableHead className="h-9 w-[17%] whitespace-nowrap">Day / Night</TableHead>
-              <TableHead className="h-9 w-[19%] whitespace-nowrap">Last updated</TableHead>
-              <TableHead className="h-9 w-[16%] whitespace-nowrap pr-4 text-right">Actions</TableHead>
+              {([
+                ["date", "Schedule date", "w-[24%] pl-4"],
+                ["jobs", "Jobs", "w-[10%]"],
+                ["teamDispatches", "Team dispatches", "w-[17%]"],
+                ["shift", "Day / Night", "w-[19%]"],
+                ["updatedAt", "Last updated", "w-[22%]"],
+              ] as const).map(([key, label, width]) => (
+                <SortableTableHead
+                  key={key}
+                  label={label}
+                  direction={sort.key === key ? sort.direction : undefined}
+                  onSort={() => sortBy(key)}
+                  title={key === "shift" ? "Sort by day shift count, then night shift count" : undefined}
+                  className={"h-9 whitespace-nowrap " + width}
+                />
+              ))}
+              <TableHead className="h-9 w-[8%] whitespace-nowrap pr-4 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!loading && filtered.map((sheet) => (
+            {!loading && visibleRows.map((sheet) => (
               <TableRow key={sheet.id} className={density === "comfortable" ? "h-9" : "h-8"}>
                 <TableCell className="pl-4">
                   <Link href={"/schedules/" + sheet.id} className="inline-flex items-center gap-2 font-semibold hover:underline">
@@ -148,15 +199,14 @@ export function ScheduleTracker() {
                   {new Date(sheet.updatedAt).toLocaleString("en-AE", { dateStyle: "medium", timeStyle: "short" })}
                 </TableCell>
                 <TableCell className="pr-4">
-                  <div className="flex flex-nowrap justify-end gap-1">
-                    <Button variant="outline" size="sm" className="h-7 px-2" asChild>
-                      <Link href={"/schedules/" + sheet.id}><ExternalLink className="size-3.5" /> Open</Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive"
-                      disabled={deleting === sheet.id} aria-label={"Delete schedule " + sheet.date}
-                      onClick={() => remove(sheet)}>
-                      <Trash2 className="size-3.5" /> Delete
-                    </Button>
+                  <div className="flex justify-end">
+                    <RowActionsMenu
+                      itemName={"schedule " + dateLabel(sheet.date)}
+                      viewHref={"/schedules/" + sheet.id}
+                      viewLabel="Open schedule"
+                      onDelete={() => { setDeleteTarget(sheet); setDeleteError(""); }}
+                      disabled={!!deleting}
+                    />
                   </div>
                 </TableCell>
               </TableRow>
@@ -181,10 +231,42 @@ export function ScheduleTracker() {
             )}
           </TableBody>
         </Table>
-        <div className="border-t px-4 py-3 font-mono text-[11px] text-muted-foreground sm:px-6">
-          Showing {loading ? 0 : filtered.length} of {sheets.length} schedules
-        </div>
+        <TablePagination
+          total={filtered.length}
+          page={currentPage}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+          disabled={loading}
+        />
       </section>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteTarget(null);
+            setDeleteError("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete schedule</DialogTitle>
+            <DialogDescription>
+              Delete the schedule for {deleteTarget ? dateLabel(deleteTarget.date) : ""}?
+              All {deleteTarget?.teamDispatches ?? 0} team dispatches in this schedule
+              will be deleted. This can&apos;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-destructive">{deleteError}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={!!deleting} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button type="button" variant="destructive" disabled={!!deleting} onClick={confirmDelete}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
