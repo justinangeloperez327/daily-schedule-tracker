@@ -3,10 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronDown, Download, Plus, Save, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Download, Plus, Save, Trash2 } from "lucide-react";
 import { SearchCombobox, type ComboboxOption } from "@/components/ui/search-combobox";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,17 +14,27 @@ import { emptyDispatch, scopeOptions, type DispatchEntry, type DispatchSheet } f
 import { apiRequest } from "@/lib/http";
 import { dateKey, dateLabel } from "@/lib/schedule";
 
-type EmployeeSlot = { key: string; employeeId: string };
-type EditorRow = Omit<DispatchEntry, "foremanIds" | "employeeIds"> & {
+type AssignmentSlot = { key: string; resourceId: string };
+type SlotField = "foremanSlots" | "labourSlots" | "equipmentSlots";
+type EditorRow = Omit<DispatchEntry, "foremanIds" | "employeeIds" | "equipmentIds"> & {
   key: string;
-  foremanSlots: EmployeeSlot[];
-  labourSlots: EmployeeSlot[];
+  foremanSlots: AssignmentSlot[];
+  labourSlots: AssignmentSlot[];
+  equipmentSlots: AssignmentSlot[];
 };
-type PickerField = "equipmentIds";
-type Picker = { rowKey: string; field: PickerField };
 
-function employeeSlot(employeeId = ""): EmployeeSlot {
-  return { key: crypto.randomUUID(), employeeId };
+const assignmentLimits: Record<SlotField, number> = {
+  foremanSlots: 60,
+  labourSlots: 150,
+  equipmentSlots: 100,
+};
+
+function assignmentSlot(resourceId = ""): AssignmentSlot {
+  return { key: crypto.randomUUID(), resourceId };
+}
+
+function isSiteForeman(designation: string): boolean {
+  return designation.trim().replace(/[\s_-]+/g, " ").toLowerCase() === "site foreman";
 }
 
 function newRow(): EditorRow {
@@ -33,14 +42,14 @@ function newRow(): EditorRow {
   return {
     key: crypto.randomUUID(),
     projectId: draft.projectId,
-    foremanSlots: [employeeSlot()],
-    equipmentIds: draft.equipmentIds,
+    foremanSlots: [assignmentSlot()],
+    labourSlots: [assignmentSlot()],
+    equipmentSlots: [assignmentSlot()],
     shift: draft.shift,
     scope: draft.scope,
     campStart: draft.campStart,
     timeIn: draft.timeIn,
     timeOut: draft.timeOut,
-    labourSlots: [employeeSlot()],
   };
 }
 
@@ -64,8 +73,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const [error, setError] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
-  const [picker, setPicker] = React.useState<Picker | null>(null);
-  const [pickerSearch, setPickerSearch] = React.useState("");
 
   React.useEffect(() => {
     let active = true;
@@ -83,9 +90,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           key: r.id || crypto.randomUUID(),
           id: r.id,
           projectId: r.projectId,
-          foremanSlots: r.foremanIds.length ? r.foremanIds.map((id) => employeeSlot(id)) : [employeeSlot()],
-          labourSlots: r.employeeIds.length ? r.employeeIds.map((id) => employeeSlot(id)) : [employeeSlot()],
-          equipmentIds: r.equipmentIds,
+          foremanSlots: r.foremanIds.length ? r.foremanIds.map((id) => assignmentSlot(id)) : [assignmentSlot()],
+          labourSlots: r.employeeIds.length ? r.employeeIds.map((id) => assignmentSlot(id)) : [assignmentSlot()],
+          equipmentSlots: r.equipmentIds.length ? r.equipmentIds.map((id) => assignmentSlot(id)) : [assignmentSlot()],
           shift: r.shift,
           scope: r.scope,
           campStart: r.campStart || "06:00",
@@ -99,29 +106,28 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     return () => { active = false; };
   }, [sheetId]);
 
-  function patch<Key extends Exclude<keyof DispatchEntry, "foremanIds" | "employeeIds">>(key: string, field: Key, value: DispatchEntry[Key]) {
+  function patch<Key extends Exclude<keyof DispatchEntry, "foremanIds" | "employeeIds" | "equipmentIds">>(key: string, field: Key, value: DispatchEntry[Key]) {
     setRows((current) => current.map((row) => row.key === key ? { ...row, [field]: value } : row));
     setError("");
   }
 
-  function updateEmployeeSlot(rowKey: string, field: "foremanSlots" | "labourSlots", slotKey: string, employeeId: string) {
+  function updateSlot(rowKey: string, field: SlotField, slotKey: string, resourceId: string) {
     setRows((current) => current.map((row) => row.key !== rowKey ? row : ({
       ...row,
-      [field]: row[field].map((slot) => slot.key === slotKey ? { ...slot, employeeId } : slot),
+      [field]: row[field].map((slot) => slot.key === slotKey ? { ...slot, resourceId } : slot),
     })));
     setError("");
   }
 
-  function addEmployeeSlot(rowKey: string, field: "foremanSlots" | "labourSlots") {
-    const limit = field === "foremanSlots" ? 60 : 150;
+  function addSlot(rowKey: string, field: SlotField) {
     setRows((current) => current.map((row) =>
-      row.key === rowKey && row[field].length < limit
-        ? { ...row, [field]: [...row[field], employeeSlot()] }
+      row.key === rowKey && row[field].length < assignmentLimits[field]
+        ? { ...row, [field]: [...row[field], assignmentSlot()] }
         : row
     ));
   }
 
-  function removeEmployeeSlot(rowKey: string, field: "foremanSlots" | "labourSlots", slotKey: string) {
+  function removeSlot(rowKey: string, field: SlotField, slotKey: string) {
     setRows((current) => current.map((row) =>
       row.key === rowKey && row[field].length > 1
         ? { ...row, [field]: row[field].filter((slot) => slot.key !== slotKey) }
@@ -130,32 +136,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     setError("");
   }
 
-  function selectedEmployees(row: EditorRow, field: "foremanSlots" | "labourSlots"): string[] {
-    return row[field].map((slot) => slot.employeeId).filter(Boolean);
+  function selectedIds(row: EditorRow, field: SlotField): string[] {
+    return row[field].map((slot) => slot.resourceId).filter(Boolean);
   }
-
-  function toggleResource(key: string, field: PickerField, id: string) {
-    setRows((current) => current.map((row) => row.key !== key ? row : ({
-      ...row,
-      [field]: row[field].includes(id)
-        ? row[field].filter((value) => value !== id)
-        : [...row[field], id],
-    })));
-  }
-
-  function openPicker(row: EditorRow, field: PickerField) {
-    setPicker({ rowKey: row.key, field });
-    setPickerSearch("");
-  }
-  const pickerRow = picker ? rows.find((row) => row.key === picker.rowKey) : undefined;
-  const pickerItems = equipments.map((item) => ({
-    id: item.id,
-    name: item.vehicleDetails || item.registrationNo || "Unnamed equipment",
-    detail: item.vehicleType,
-  }));
-  const matches = pickerItems.filter((item) =>
-    (item.name + " " + item.detail).toLowerCase().includes(pickerSearch.toLowerCase())
-  ).sort((a, b) => a.name.localeCompare(b.name));
 
   const projectOptions: ComboboxOption[] = projects.map((project) => ({
     value: project.id,
@@ -172,9 +155,95 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     searchText: [employee.name, employee.employeeCode, employee.designation].filter(Boolean).join(" "),
   }));
 
-  function chosenEquipmentNames(row: EditorRow): string {
-    if (!row.equipmentIds.length) return "Select equipment";
-    return row.equipmentIds.map((id) => equipments.find((e) => e.id === id)?.vehicleDetails || "Equipment").join(", ");
+  // This is a role-specific picker, not a subset inferred from employee names.
+  const siteForemanIds = new Set(employees.filter((employee) =>
+    isSiteForeman(employee.designation)
+  ).map((employee) => employee.id));
+  const foremanOptions = employeeOptions.filter((option) => siteForemanIds.has(option.value));
+
+  const equipmentOptions: ComboboxOption[] = equipments.map((equipment) => ({
+    value: equipment.id,
+    label: equipment.vehicleDetails || equipment.registrationNo || "Unnamed Equipment",
+    description: [equipment.registrationNo, equipment.vehicleType].filter(Boolean).join(" · "),
+    searchText: [equipment.registrationNo, equipment.vehicleDetails, equipment.vehicleType]
+      .filter(Boolean).join(" "),
+  }));
+
+  function renderSlots(
+    row: EditorRow,
+    index: number,
+    field: SlotField,
+    label: "Foreman" | "Labour" | "Equipment",
+    options: ComboboxOption[]
+  ) {
+    const hasInvalidSelection = row[field].some((slot) =>
+      slot.resourceId && !options.some((option) => option.value === slot.resourceId)
+    );
+    return (
+      <TableCell className="min-w-0 px-3 py-2 align-top">
+        <div className="space-y-1.5">
+          {row[field].map((slot, slotIndex) => (
+            <div key={slot.key} className="flex min-w-0 items-start gap-1.5">
+              <div className="min-w-0 flex-1">
+                <SearchCombobox
+                  label={label + " " + (slotIndex + 1) + " for job " + (index + 1)}
+                  value={slot.resourceId}
+                  onValueChange={(id) => updateSlot(row.key, field, slot.key, id)}
+                  options={options.map((option) => ({
+                    ...option,
+                    disabled: row[field].some((other) =>
+                      other.key !== slot.key && other.resourceId === option.value
+                    ),
+                  }))}
+                  placeholder={"Search " + label.toLowerCase() + "..."}
+                  disabled={saving}
+                />
+              </div>
+              {row[field].length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-9 shrink-0 text-destructive hover:text-destructive"
+                  disabled={saving}
+                  aria-label={"Remove " + label.toLowerCase() + " " + (slotIndex + 1) + " from job " + (index + 1)}
+                  onClick={() => removeSlot(row.key, field, slot.key)}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full border-dashed"
+            disabled={saving || row[field].length >= assignmentLimits[field]}
+            onClick={() => addSlot(row.key, field)}
+          >
+            <Plus className="size-3.5" /> Add {label}
+          </Button>
+          {options.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              {field === "foremanSlots"
+                ? "No Site Foremen found. Set employee Designation to Site Foreman on the Employees page."
+                : field === "labourSlots"
+                  ? "Add or import employees before assigning labour."
+                  : "Add or import equipment before assigning it."}
+            </p>
+          )}
+          {hasInvalidSelection && (
+            <p className="text-xs text-destructive" role="alert">
+              {label} assignment no longer matches the available options; select a valid record.
+            </p>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            {selectedIds(row, field).length} selected · minimum 1
+          </p>
+        </div>
+      </TableCell>
+    );
   }
 
   async function save() {
@@ -183,17 +252,23 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     if (!rows.length) { setError("Add at least one dispatch row."); return; }
     const invalid = rows.findIndex((r) => !r.projectId || !r.scope.trim() || !r.campStart || !r.timeIn || !r.timeOut);
     if (invalid >= 0) { setError("Row " + (invalid + 1) + ": select job and scope, and fill out all three times."); return; }
-    const missingLabour = rows.findIndex((r) => selectedEmployees(r, "labourSlots").length === 0);
+    const missingLabour = rows.findIndex((r) => selectedIds(r, "labourSlots").length === 0);
     if (missingLabour >= 0) {
       setError("Row " + (missingLabour + 1) + ": select at least one labour.");
       return;
     }
-    const missingForeman = rows.findIndex((r) => selectedEmployees(r, "foremanSlots").length === 0);
+    const missingForeman = rows.findIndex((r) => selectedIds(r, "foremanSlots").length === 0);
     if (missingForeman >= 0) {
       setError("Row " + (missingForeman + 1) + ": select at least one foreman.");
       return;
     }
-    const missingEquipment = rows.findIndex((r) => r.equipmentIds.length === 0);
+    const wrongForeman = rows.findIndex((r) => selectedIds(r, "foremanSlots")
+      .some((id) => !siteForemanIds.has(id)));
+    if (wrongForeman >= 0) {
+      setError("Row " + (wrongForeman + 1) + ": select an employee designated as Site Foreman.");
+      return;
+    }
+    const missingEquipment = rows.findIndex((r) => selectedIds(r, "equipmentSlots").length === 0);
     if (missingEquipment >= 0) {
       setError("Row " + (missingEquipment + 1) + ": select at least one equipment item.");
       return;
@@ -202,9 +277,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     try {
       const payload = { date, jobs: rows.map((r) => ({
         ...(r.id ? { id: r.id } : {}),
-        projectId: r.projectId, foremanIds: selectedEmployees(r, "foremanSlots"),
-        employeeIds: selectedEmployees(r, "labourSlots"),
-        equipmentIds: r.equipmentIds, shift: r.shift, scope: r.scope.trim(),
+        projectId: r.projectId, foremanIds: selectedIds(r, "foremanSlots"),
+        employeeIds: selectedIds(r, "labourSlots"),
+        equipmentIds: selectedIds(r, "equipmentSlots"), shift: r.shift, scope: r.scope.trim(),
         campStart: r.campStart, timeIn: r.timeIn, timeOut: r.timeOut,
       })) };
       await apiRequest<DispatchSheet>(sheetId ? "/api/schedules/" + encodeURIComponent(sheetId) : "/api/schedules", {
@@ -228,8 +303,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         date,
         rows.map((row) => ({
           ...row,
-          foremanIds: selectedEmployees(row, "foremanSlots"),
-          employeeIds: selectedEmployees(row, "labourSlots"),
+          foremanIds: selectedIds(row, "foremanSlots"),
+          employeeIds: selectedIds(row, "labourSlots"),
+          equipmentIds: selectedIds(row, "equipmentSlots"),
         })),
         projects,
         employees,
@@ -291,156 +367,66 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         <p className="px-3 py-2 text-xs text-muted-foreground lg:hidden">
           Scroll the dispatch table sideways to assign jobs, teams, equipment, shifts and times.
         </p>
-        <Table className="min-w-[1720px] table-auto">
+        <Table className="min-w-[1945px] table-fixed">
+          <colgroup>
+            <col style={{ width: 58 }} />
+            <col style={{ width: 380 }} />
+            <col style={{ width: 285 }} />
+            <col style={{ width: 285 }} />
+            <col style={{ width: 285 }} />
+            <col style={{ width: 115 }} />
+            <col style={{ width: 215 }} />
+            <col style={{ width: 236 }} />
+            <col style={{ width: 86 }} />
+          </colgroup>
           <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
               <TableHead className="h-9 w-[55px] pl-4">#</TableHead>
-              <TableHead className="min-w-[275px]">Select Job</TableHead>
-              <TableHead className="min-w-[275px]">Foremen *</TableHead>
-              <TableHead className="min-w-[275px]">Labours *</TableHead>
-              <TableHead className="min-w-[190px]">Equipment *</TableHead>
-              <TableHead className="min-w-[120px]">Day / Night</TableHead>
-              <TableHead className="min-w-[210px]">Scope</TableHead>
-              <TableHead className="min-w-[235px]">Time</TableHead>
+              <TableHead className="w-[380px]">Select Job</TableHead>
+              <TableHead className="w-[285px]">Foremen *</TableHead>
+              <TableHead className="w-[285px]">Labours *</TableHead>
+              <TableHead className="w-[285px]">Equipment *</TableHead>
+              <TableHead className="w-[115px]">Day / Night</TableHead>
+              <TableHead className="w-[215px]">Scope</TableHead>
+              <TableHead className="w-[236px]">Time</TableHead>
               <TableHead className="h-9 w-[85px] pr-4 text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {!loading && rows.map((row, index) => {
               const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
+              const selectedProject = projects.find((project) => project.id === row.projectId);
               return (
-                <TableRow key={row.key} className="align-top">
+                <TableRow key={row.key} className="[&>td]:align-top">
                   <TableCell className="pl-4 py-2 align-top font-medium text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell className="py-2 align-top">
-                    <SearchCombobox
-                      label={"Job for dispatch " + (index + 1)}
-                      value={row.projectId}
-                      onValueChange={(value) => patch(row.key, "projectId", value)}
-                      options={projectOptions}
-                      placeholder="Search Job No, SO No or Project..."
-                      disabled={saving}
-                    />
-                    {projects.length === 0 && <Link href="/projects" className="mt-2 block text-xs underline">Add/import projects first</Link>}
-                    {row.projectId && <p className="mt-1.5 truncate text-xs text-muted-foreground">
-                      {projects.find((p) => p.id === row.projectId)?.clientName || "Client not specified"}
-                    </p>}
-                  </TableCell>
-                  <TableCell className="min-w-[260px] py-2 align-top">
-                    <div className="space-y-1.5">
-                      {row.foremanSlots.map((slot, slotIndex) => (
-                        <div key={slot.key} className="flex min-w-0 items-center gap-1.5">
-                          <div className="min-w-0 flex-1">
-                            <SearchCombobox
-                              label={"Foreman " + (slotIndex + 1) + " for job " + (index + 1)}
-                              value={slot.employeeId}
-                              onValueChange={(id) => updateEmployeeSlot(row.key, "foremanSlots", slot.key, id)}
-                              options={employeeOptions.map((option) => ({
-                                ...option,
-                                disabled: row.foremanSlots.some((other) =>
-                                  other.key !== slot.key && other.employeeId === option.value
-                                ),
-                              }))}
-                              placeholder="Search foreman by name or ID..."
-                              disabled={saving}
-                            />
-                          </div>
-                          {row.foremanSlots.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={saving}
-                              className="shrink-0 text-destructive hover:text-destructive"
-                              aria-label={"Remove foreman " + (slotIndex + 1) + " from job " + (index + 1)}
-                              onClick={() => removeEmployeeSlot(row.key, "foremanSlots", slot.key)}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-dashed"
-                        disabled={saving || row.foremanSlots.length >= 60}
-                        onClick={() => addEmployeeSlot(row.key, "foremanSlots")}
-                      >
-                        <Plus className="size-3.5" /> Add Foreman
-                      </Button>
-                      {employees.length === 0 && (
-                        <Link href="/employees" className="block text-xs text-muted-foreground underline">
-                          Add or import employees first
+                  <TableCell className="w-[380px] px-4 py-2 align-top">
+                    <div className="min-w-0 space-y-1.5">
+                      <SearchCombobox
+                        label={"Job for dispatch " + (index + 1)}
+                        value={row.projectId}
+                        onValueChange={(value) => patch(row.key, "projectId", value)}
+                        options={projectOptions}
+                        placeholder="Search Job No, SO No or Project..."
+                        disabled={saving}
+                      />
+                      {projects.length === 0 && (
+                        <Link href="/projects" className="block text-xs underline">
+                          Add or import projects first
                         </Link>
                       )}
-                      <p className="text-[11px] text-muted-foreground">
-                        {selectedEmployees(row, "foremanSlots").length} selected · minimum 1
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="min-w-[260px] py-2 align-top">
-                    <div className="space-y-1.5">
-                      {row.labourSlots.map((slot, slotIndex) => (
-                        <div key={slot.key} className="flex min-w-0 items-center gap-1.5">
-                          <div className="min-w-0 flex-1">
-                            <SearchCombobox
-                              label={"Labour " + (slotIndex + 1) + " for job " + (index + 1)}
-                              value={slot.employeeId}
-                              onValueChange={(id) => updateEmployeeSlot(row.key, "labourSlots", slot.key, id)}
-                              options={employeeOptions.map((option) => ({
-                                ...option,
-                                disabled: row.labourSlots.some((other) =>
-                                  other.key !== slot.key && other.employeeId === option.value
-                                ),
-                              }))}
-                              placeholder="Search labour by name or ID..."
-                              disabled={saving}
-                            />
-                          </div>
-                          {row.labourSlots.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled={saving}
-                              className="shrink-0 text-destructive hover:text-destructive"
-                              aria-label={"Remove labour " + (slotIndex + 1) + " from job " + (index + 1)}
-                              onClick={() => removeEmployeeSlot(row.key, "labourSlots", slot.key)}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
-                          )}
+                      {selectedProject && (
+                        <div className="min-w-0 space-y-0.5 text-xs leading-4 text-muted-foreground">
+                          <p className="break-words font-medium text-foreground">{selectedProject.name || "Unnamed project"}</p>
+                          <p className="break-words">
+                            SO: {selectedProject.soNo || "—"} · {selectedProject.clientName || "Client not specified"}
+                          </p>
                         </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-dashed"
-                        disabled={saving || row.labourSlots.length >= 150}
-                        onClick={() => addEmployeeSlot(row.key, "labourSlots")}
-                      >
-                        <Plus className="size-3.5" /> Add Labour
-                      </Button>
-                      {employees.length === 0 && (
-                        <Link href="/employees" className="block text-xs text-muted-foreground underline">
-                          Add or import employees first
-                        </Link>
                       )}
-                      <p className="text-[11px] text-muted-foreground">
-                        {selectedEmployees(row, "labourSlots").length} selected · minimum 1
-                      </p>
                     </div>
                   </TableCell>
-                  <TableCell className="min-w-[190px] py-2 align-top">
-                    <Button variant="outline" className="h-auto min-h-9 w-full items-start justify-between gap-2 whitespace-normal px-2.5 py-1.5 text-left font-normal"
-                      onClick={() => openPicker(row, "equipmentIds")}>
-                      <span className="min-w-0 flex-1 whitespace-normal break-words text-left text-xs leading-5 [overflow-wrap:anywhere]">{chosenEquipmentNames(row)}</span>
-                      <ChevronDown className="ml-1 size-3.5 shrink-0 text-muted-foreground" />
-                    </Button>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{row.equipmentIds.length} selected · minimum 1</p>
-                  </TableCell>
+                  {renderSlots(row, index, "foremanSlots", "Foreman", foremanOptions)}
+                  {renderSlots(row, index, "labourSlots", "Labour", employeeOptions)}
+                  {renderSlots(row, index, "equipmentSlots", "Equipment", equipmentOptions)}
                   <TableCell className="py-2 align-top">
                     <SelectField label={"Shift for dispatch " + (index + 1)} value={row.shift}
                       onChange={(value) => patch(row.key, "shift", value as DispatchEntry["shift"])}>
@@ -507,37 +493,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         </Button>
       </div>
 
-      <Dialog open={!!picker} onOpenChange={(open) => { if (!open) setPicker(null); }}>
-        <DialogContent className="sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle>Select Equipment</DialogTitle>
-            <DialogDescription>Select multiple resources for this job. Click Done when finished.</DialogDescription>
-          </DialogHeader>
-          <Input value={pickerSearch} onChange={(event) => setPickerSearch(event.target.value)}
-            placeholder="Search by name or designation..." aria-label="Search resources" />
-          <div className="max-h-[350px] min-h-[120px] space-y-1 overflow-y-auto rounded-md border p-2">
-            {matches.map((item) => {
-              const checked = !!picker && !!pickerRow && pickerRow[picker.field].includes(item.id);
-              return <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60">
-                <input className="size-4 accent-[#365F91]" type="checkbox" checked={checked}
-                  onChange={() => { if (picker) toggleResource(picker.rowKey, picker.field, item.id); }} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{item.name}</span>
-                  {item.detail && <span className="block truncate text-xs text-muted-foreground">{item.detail}</span>}
-                </span>
-                {checked && <Check className="size-4" />}
-              </label>;
-            })}
-            {matches.length === 0 && <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
-              <Users className="size-6" /> No matching records
-            </div>}
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{picker && pickerRow ? pickerRow[picker.field].length : 0} selected</span>
-            <Button onClick={() => setPicker(null)}>Done</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }
