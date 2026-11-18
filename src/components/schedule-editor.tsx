@@ -3,18 +3,18 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Download, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Download, Plus, Save } from "lucide-react";
 import { SearchCombobox, type ComboboxOption } from "@/components/ui/search-combobox";
+import { ResourceChecklist, type PlanningResourceOption } from "@/components/resource-checklist";
 import { Button } from "@/components/ui/button";
 import { RowActionsMenu } from "@/components/ui/row-actions-menu";
-import { SortableTableHead, type TableSortDirection } from "@/components/ui/sortable-table-head";
+import type { TableSortDirection } from "@/components/ui/sortable-table-head";
 import { compareTableValues } from "@/lib/table-sort";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Project, Employee, Equipment } from "@/lib/catalog";
 import { emptyDispatch, scopeOptions, type DispatchEntry, type DispatchSheet } from "@/lib/dispatch";
 import { apiRequest } from "@/lib/http";
@@ -49,9 +49,9 @@ function newRow(): EditorRow {
   return {
     key: crypto.randomUUID(),
     projectId: draft.projectId,
-    foremanSlots: [assignmentSlot()],
-    labourSlots: [assignmentSlot()],
-    equipmentSlots: [assignmentSlot()],
+    foremanSlots: [],
+    labourSlots: [],
+    equipmentSlots: [],
     shift: draft.shift,
     scope: draft.scope,
     campStart: draft.campStart,
@@ -101,9 +101,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           key: r.id || crypto.randomUUID(),
           id: r.id,
           projectId: r.projectId,
-          foremanSlots: r.foremanIds.length ? r.foremanIds.map((id) => assignmentSlot(id)) : [assignmentSlot()],
-          labourSlots: r.employeeIds.length ? r.employeeIds.map((id) => assignmentSlot(id)) : [assignmentSlot()],
-          equipmentSlots: r.equipmentIds.length ? r.equipmentIds.map((id) => assignmentSlot(id)) : [assignmentSlot()],
+          foremanSlots: r.foremanIds.map((id) => assignmentSlot(id)),
+          labourSlots: r.employeeIds.map((id) => assignmentSlot(id)),
+          equipmentSlots: r.equipmentIds.map((id) => assignmentSlot(id)),
           shift: r.shift,
           scope: r.scope,
           campStart: r.campStart || "06:00",
@@ -122,28 +122,19 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     setError("");
   }
 
-  function updateSlot(rowKey: string, field: SlotField, slotKey: string, resourceId: string) {
-    setRows((current) => current.map((row) => row.key !== rowKey ? row : ({
-      ...row,
-      [field]: row[field].map((slot) => slot.key === slotKey ? { ...slot, resourceId } : slot),
-    })));
-    setError("");
-  }
-
-  function addSlot(rowKey: string, field: SlotField) {
-    setRows((current) => current.map((row) =>
-      row.key === rowKey && row[field].length < assignmentLimits[field]
-        ? { ...row, [field]: [...row[field], assignmentSlot()] }
-        : row
-    ));
-  }
-
-  function removeSlot(rowKey: string, field: SlotField, slotKey: string) {
-    setRows((current) => current.map((row) =>
-      row.key === rowKey && row[field].length > 1
-        ? { ...row, [field]: row[field].filter((slot) => slot.key !== slotKey) }
-        : row
-    ));
+  function toggleAssignment(rowKey: string, field: SlotField, resourceId: string, checked: boolean) {
+    setRows((current) => current.map((row) => {
+      if (row.key !== rowKey) return row;
+      // A checkbox represents one unique assignment, and a resource may be used
+      // on a second job if the planner approves it.
+      const assigned = row[field].filter((slot) => slot.resourceId);
+      if (checked) {
+        if (assigned.some((slot) => slot.resourceId === resourceId) ||
+          assigned.length >= assignmentLimits[field]) return row;
+        return { ...row, [field]: [...assigned, assignmentSlot(resourceId)] };
+      }
+      return { ...row, [field]: assigned.filter((slot) => slot.resourceId !== resourceId) };
+    }));
     setError("");
   }
 
@@ -228,80 +219,50 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       .filter(Boolean).join(" "),
   }));
 
-  function renderSlots(
+  function renderResourceList(
     row: EditorRow,
     index: number,
     field: SlotField,
-    label: "Foreman" | "Labour" | "Equipment",
-    options: ComboboxOption[]
+    title: "Foremen" | "Labourers" | "Equipment",
+    options: ComboboxOption[],
+    emptyHint: string,
   ) {
-    const hasInvalidSelection = row[field].some((slot) =>
-      slot.resourceId && !options.some((option) => option.value === slot.resourceId)
-    );
+    const chosen = selectedIds(row, field);
+    const known = new Set(options.map((item) => item.value));
+    const enriched: PlanningResourceOption[] = options.map((option) => ({
+      ...option,
+      otherJobs: rows.flatMap((other, otherIndex) =>
+        other.key !== row.key && other[field].some((slot) => slot.resourceId === option.value)
+          ? [otherIndex + 1] : []
+      ),
+    }));
+    // Keep stale assignments visible and removable. They must never disappear
+    // silently when a Site Foreman's designation changes or a record is deleted.
+    for (const id of chosen) {
+      if (known.has(id)) continue;
+      const employee = employees.find((item) => item.id === id);
+      const equipment = equipments.find((item) => item.id === id);
+      enriched.push({
+        value: id,
+        label: employee?.name || equipment?.vehicleDetails || "Unknown resource (" + id + ")",
+        description: field === "foremanSlots" && employee
+          ? "Designation: " + (employee.designation || "not set") + " · Site Foreman required"
+          : "Resource is no longer eligible or available in the directory",
+        searchText: [employee?.employeeCode, equipment?.registrationNo, id].filter(Boolean).join(" "),
+        invalid: true,
+      });
+    }
     return (
-      <TableCell className="min-w-0 px-3 py-2 align-top">
-        <div className="space-y-1.5">
-          {row[field].map((slot, slotIndex) => (
-            <div key={slot.key} className="flex min-w-0 items-start gap-1.5">
-              <div className="min-w-0 flex-1">
-                <SearchCombobox
-                  label={label + " " + (slotIndex + 1) + " for job " + (index + 1)}
-                  value={slot.resourceId}
-                  onValueChange={(id) => updateSlot(row.key, field, slot.key, id)}
-                  options={options.map((option) => ({
-                    ...option,
-                    disabled: row[field].some((other) =>
-                      other.key !== slot.key && other.resourceId === option.value
-                    ),
-                  }))}
-                  placeholder={"Search " + label.toLowerCase() + "..."}
-                  disabled={saving}
-                />
-              </div>
-              {row[field].length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-9 shrink-0 text-destructive hover:text-destructive"
-                  disabled={saving}
-                  aria-label={"Remove " + label.toLowerCase() + " " + (slotIndex + 1) + " from job " + (index + 1)}
-                  onClick={() => removeSlot(row.key, field, slot.key)}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              )}
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full border-dashed"
-            disabled={saving || row[field].length >= assignmentLimits[field]}
-            onClick={() => addSlot(row.key, field)}
-          >
-            <Plus className="size-3.5" /> Add {label}
-          </Button>
-          {options.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              {field === "foremanSlots"
-                ? "No Site Foremen found. Set employee Designation to Site Foreman on the Employees page."
-                : field === "labourSlots"
-                  ? "Add or import employees before assigning labour."
-                  : "Add or import equipment before assigning it."}
-            </p>
-          )}
-          {hasInvalidSelection && (
-            <p className="text-xs text-destructive" role="alert">
-              {label} assignment no longer matches the available options; select a valid record.
-            </p>
-          )}
-          <p className="text-[11px] text-muted-foreground">
-            {selectedIds(row, field).length} selected · minimum 1
-          </p>
-        </div>
-      </TableCell>
+      <ResourceChecklist
+        title={title}
+        jobNumber={index + 1}
+        options={enriched}
+        selectedIds={chosen}
+        onToggle={(resourceId, checked) => toggleAssignment(row.key, field, resourceId, checked)}
+        maxSelected={assignmentLimits[field]}
+        disabled={loading || saving}
+        emptyHint={emptyHint}
+      />
     );
   }
 
@@ -383,7 +344,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         <div>
           <p className="technical-eyebrow mb-1.5">OPERATIONS / SCHEDULES / DISPATCH</p>
           <h1 className="text-[28px] font-semibold tracking-tight text-primary">{sheetId ? "Edit Schedule" : "Create Schedule"}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Assign jobs, foremen, labours, and working times for each dispatch team.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Plan each job with searchable, scrollable Foremen, Labourers and Equipment lists.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button className="w-full sm:w-auto" variant="outline" disabled={loading || exporting || rows.length === 0} onClick={exportExcel}>
@@ -410,152 +371,230 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       </div>
 
       {error && <p role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
-      <section className="min-w-0 rounded-xl border bg-white">
-        <div className="flex flex-col items-start justify-between gap-3 border-b px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-5">
+      <section className="min-w-0">
+        <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-border bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-5">
           <div>
-            <h2 className="font-semibold">Dispatch table</h2>
+            <h2 className="text-base font-semibold text-primary">Daily job planning</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              One row = one scheduled job. A job may have multiple foremen, labourers and equipment assignments.
+              One card per job. Search, scroll and tick resources inside the Foremen, Labourers and Equipment panels.
             </p>
           </div>
-          <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setRows((current) => [...current, newRow()])}>
-            <Plus /> Add Job
-          </Button>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <label htmlFor="job-sort-key" className="text-xs font-medium text-muted-foreground">Sort jobs</label>
+            <select
+              id="job-sort-key"
+              value={sort.key}
+              onChange={(event) => setSort({ key: event.target.value as EditorSortKey, direction: "asc" })}
+              className="h-9 min-w-0 flex-1 rounded-md border border-input bg-white px-2 text-sm text-foreground sm:flex-none"
+            >
+              <option value="original">Original order</option>
+              <option value="job">Job No / Project</option>
+              <option value="foremen">Foremen count</option>
+              <option value="labours">Labour count</option>
+              <option value="equipment">Equipment count</option>
+              <option value="shift">Shift</option>
+              <option value="scope">Scope</option>
+              <option value="time">Work start time</option>
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              title={"Sort " + (sort.direction === "asc" ? "descending" : "ascending")}
+              aria-label={"Sort jobs " + (sort.direction === "asc" ? "descending" : "ascending")}
+              onClick={() => sortBy(sort.key)}
+            >
+              {sort.direction === "asc" ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-9"
+              disabled={loading || saving}
+              onClick={() => setRows((current) => [...current, newRow()])}
+            >
+              <Plus className="size-4" /> Add Job
+            </Button>
+          </div>
         </div>
 
-        <p className="px-3 py-2 text-xs text-muted-foreground lg:hidden">
-          Scroll the dispatch table sideways to assign jobs, teams, equipment, shifts and times.
-        </p>
-        <Table className="min-w-[1945px] table-fixed">
-          <colgroup>
-            <col style={{ width: 58 }} />
-            <col style={{ width: 380 }} />
-            <col style={{ width: 285 }} />
-            <col style={{ width: 285 }} />
-            <col style={{ width: 285 }} />
-            <col style={{ width: 115 }} />
-            <col style={{ width: 215 }} />
-            <col style={{ width: 236 }} />
-            <col style={{ width: 86 }} />
-          </colgroup>
-          <TableHeader className="bg-[#f0f5fa]">
-            <TableRow className="h-9">
-              {([
-                ["original", "#", "w-[55px] pl-4", "Original job order (sorting does not change saved order)"],
-                ["job", "Select Job", "w-[380px]", "Sort by job number or project name"],
-                ["foremen", "Foremen *", "w-[285px]", "Sort by number of foremen selected"],
-                ["labours", "Labours *", "w-[285px]", "Sort by number of labourers selected"],
-                ["equipment", "Equipment *", "w-[285px]", "Sort by number of equipment items selected"],
-                ["shift", "Day / Night", "w-[115px]", "Sort by shift"],
-                ["scope", "Scope", "w-[215px]", "Sort by scope"],
-                ["time", "Time", "w-[236px]", "Sort by start time"],
-              ] as const).map(([key, label, width, title]) => (
-                <SortableTableHead
-                  key={key}
-                  label={label}
-                  direction={sort.key === key ? sort.direction : undefined}
-                  onSort={() => sortBy(key)}
-                  className={width}
-                  title={title}
-                />
-              ))}
-              <TableHead className="h-9 w-[85px] pr-4 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!loading && displayedRows.map(({ row, index }) => {
-              const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
-              const selectedProject = projects.find((project) => project.id === row.projectId);
-              return (
-                <TableRow key={row.key} className="[&>td]:align-top">
-                  <TableCell className="pl-4 py-2 align-top font-medium text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell className="w-[380px] px-4 py-2 align-top">
-                    <div className="min-w-0 space-y-1.5">
+        {loading && (
+          <div className="rounded-xl border border-border bg-white px-4 py-12 text-center text-sm text-muted-foreground">
+            Loading schedule and resources...
+          </div>
+        )}
+        {!loading && rows.length === 0 && (
+          <div className="rounded-xl border border-border bg-white px-4 py-12 text-center">
+            <p className="text-sm font-medium text-primary">No jobs in this schedule</p>
+            <p className="mt-1 text-xs text-muted-foreground">Add a job to start assigning your team and equipment.</p>
+            <Button variant="outline" className="mt-4" onClick={() => setRows((current) => [...current, newRow()])}>
+              <Plus className="size-4" /> Add Job
+            </Button>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {!loading && displayedRows.map(({ row, index }) => {
+            const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
+            const selectedProject = projects.find((project) => project.id === row.projectId);
+            const assignedCount =
+              selectedIds(row, "foremanSlots").length +
+              selectedIds(row, "labourSlots").length +
+              selectedIds(row, "equipmentSlots").length;
+            return (
+              <section
+                key={row.key}
+                aria-labelledby={"dispatch-job-" + row.key}
+                className="min-w-0 overflow-visible rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-[#F8FAFD] px-4 py-3 sm:px-5">
+                  <div className="min-w-0 flex-1">
+                    <p className="technical-eyebrow">JOB {String(index + 1).padStart(2, "0")} / DISPATCH</p>
+                    <h3 id={"dispatch-job-" + row.key} className="mt-1 break-words text-base font-semibold text-primary">
+                      {selectedProject?.name || "Select project"}
+                    </h3>
+                    <p className="mt-1 break-words text-xs text-muted-foreground">
+                      {selectedProject?.jobNo || "Job No not selected"} · {selectedProject?.clientName || "Client not selected"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                      {assignedCount} resources selected
+                    </span>
+                    <RowActionsMenu
+                      itemName={"dispatch job " + (index + 1)}
+                      onDuplicate={() => duplicateJob(row.key)}
+                      onDelete={() => setRemoveTarget(row.key)}
+                      deleteLabel="Remove job"
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid min-w-0 gap-4 px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                  <div className="min-w-0 space-y-4">
+                    <div className="min-w-0 space-y-2">
+                      <Label>Project / Job No *</Label>
                       <SearchCombobox
-                        label={"Job for dispatch " + (index + 1)}
+                        label={"Project for dispatch job " + (index + 1)}
                         value={row.projectId}
                         onValueChange={(value) => patch(row.key, "projectId", value)}
                         options={projectOptions}
-                        placeholder="Search Job No, SO No or Project..."
+                        placeholder="Search Job No, SO No or project name..."
                         disabled={saving}
                       />
                       {projects.length === 0 && (
-                        <Link href="/projects" className="block text-xs underline">
+                        <Link href="/projects" className="block text-xs text-[#365F91] underline">
                           Add or import projects first
                         </Link>
                       )}
                       {selectedProject && (
-                        <div className="min-w-0 space-y-0.5 text-xs leading-4 text-muted-foreground">
-                          <p className="break-words font-medium text-foreground">{selectedProject.name || "Unnamed project"}</p>
-                          <p className="break-words">
-                            SO: {selectedProject.soNo || "—"} · {selectedProject.clientName || "Client not specified"}
-                          </p>
-                        </div>
+                        <p className="break-words text-xs leading-5 text-muted-foreground">
+                          SO: {selectedProject.soNo || "—"} · {selectedProject.clientName || "Client not specified"}
+                        </p>
                       )}
                     </div>
-                  </TableCell>
-                  {renderSlots(row, index, "foremanSlots", "Foreman", foremanOptions)}
-                  {renderSlots(row, index, "labourSlots", "Labour", employeeOptions)}
-                  {renderSlots(row, index, "equipmentSlots", "Equipment", equipmentOptions)}
-                  <TableCell className="py-2 align-top">
-                    <SelectField label={"Shift for dispatch " + (index + 1)} value={row.shift}
-                      onChange={(value) => patch(row.key, "shift", value as DispatchEntry["shift"])}>
-                      <option value="Day">Day</option><option value="Night">Night</option>
-                    </SelectField>
-                  </TableCell>
-                  <TableCell className="py-2 align-top">
-                    <SelectField label={"Scope for dispatch " + (index + 1)}
-                      value={customScope ? "__other__" : row.scope}
-                      onChange={(value) => patch(row.key, "scope", value === "__other__" ? "Other" : value)}>
-                      <option value="">Select scope...</option>
-                      {scopeOptions.map((scope) => <option key={scope} value={scope}>{scope}</option>)}
-                      <option value="__other__">Other (specify)</option>
-                    </SelectField>
-                    {customScope && <Input className="mt-2" maxLength={200} value={row.scope}
-                      aria-label={"Custom scope for dispatch " + (index + 1)} placeholder="Describe scope..."
-                      onChange={(event) => patch(row.key, "scope", event.target.value)} />}
-                  </TableCell>
-                  <TableCell className="space-y-1 py-2">
-                    {([
-                      ["campStart", "Camp start"],
-                      ["timeIn", "Start time"],
-                      ["timeOut", "End time"],
-                    ] as const).map(([field, label]) => (
-                      <div key={field} className="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-1.5">
-                        <label className="text-[11px] text-muted-foreground" htmlFor={row.key + field}>{label}</label>
-                        <Input id={row.key + field} type="time" value={row[field]}
-                          onChange={(event) => patch(row.key, field, event.target.value)} className="h-8 min-w-0 w-full px-2 text-xs" />
-                      </div>
-                    ))}
-                  </TableCell>
-                  <TableCell className="pr-4 py-2 text-right align-top">
-                    <div className="flex justify-end">
-                      <RowActionsMenu
-                        itemName={"dispatch job " + (index + 1)}
-                        onDuplicate={() => duplicateJob(row.key)}
-                        onDelete={() => setRemoveTarget(row.key)}
-                        deleteLabel="Remove job"
-                        disabled={saving}
-                      />
+                    <div className="space-y-2">
+                      <Label>Scope of work *</Label>
+                      <SelectField
+                        label={"Scope of work for job " + (index + 1)}
+                        value={customScope ? "__other__" : row.scope}
+                        onChange={(value) => patch(row.key, "scope", value === "__other__" ? "Other" : value)}
+                      >
+                        <option value="">Select scope...</option>
+                        {scopeOptions.map((scope) => <option value={scope} key={scope}>{scope}</option>)}
+                        <option value="__other__">Other (specify)</option>
+                      </SelectField>
+                      {customScope && (
+                        <Input
+                          aria-label={"Custom scope for job " + (index + 1)}
+                          placeholder="Describe scope of work..."
+                          maxLength={200}
+                          value={row.scope}
+                          onChange={(event) => patch(row.key, "scope", event.target.value)}
+                        />
+                      )}
                     </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {!loading && rows.length === 0 && <TableRow>
-              <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
-                No dispatch rows. Click Add Job / Team to start.
-              </TableCell>
-            </TableRow>}
-            {loading && <TableRow><TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
-              Loading schedule and resources...
-            </TableCell></TableRow>}
-          </TableBody>
-        </Table>
-        <div className="flex flex-col items-start justify-between gap-3 border-t px-3 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-5">
-          <p className="text-xs text-muted-foreground">24-hour times · Night shifts may finish the next morning. Header sorting changes the displayed order only, not the saved job order.</p>
-          <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setRows((current) => [...current, newRow()])}>
-            <Plus /> Add Job
+                  </div>
+                  <div className="min-w-0 space-y-3">
+                    <div className="space-y-2">
+                      <Label>Shift *</Label>
+                      <SelectField
+                        label={"Shift for job " + (index + 1)}
+                        value={row.shift}
+                        onChange={(value) => patch(row.key, "shift", value as DispatchEntry["shift"])}
+                      >
+                        <option value="Day">Day shift</option>
+                        <option value="Night">Night shift</option>
+                      </SelectField>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                      {([
+                        ["campStart", "Camp start"],
+                        ["timeIn", "Work start"],
+                        ["timeOut", "Work end"],
+                      ] as const).map(([field, label]) => (
+                        <div key={field} className="min-w-0 space-y-1.5">
+                          <Label htmlFor={row.key + field} className="text-xs">{label} *</Label>
+                          <Input
+                            id={row.key + field}
+                            type="time"
+                            value={row[field]}
+                            onChange={(event) => patch(row.key, field, event.target.value)}
+                            className="h-9 min-w-0 px-2 text-sm tabular-nums"
+                            disabled={saving}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border px-4 pb-4 pt-3 sm:px-5">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-primary">Resource assignments</h4>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Each panel has a search and its own scrollable list. Check a name or vehicle to assign it.
+                      </p>
+                    </div>
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      FOREMEN {selectedIds(row, "foremanSlots").length} ·
+                      LABOUR {selectedIds(row, "labourSlots").length} ·
+                      EQUIPMENT {selectedIds(row, "equipmentSlots").length}
+                    </p>
+                  </div>
+                  <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {renderResourceList(
+                      row, index, "foremanSlots", "Foremen", foremanOptions,
+                      "No Site Foremen in the employee directory. Designation must be Site Foreman.",
+                    )}
+                    {renderResourceList(
+                      row, index, "labourSlots", "Labourers", employeeOptions,
+                      "No employees in the directory. Add or import labourers first.",
+                    )}
+                    {renderResourceList(
+                      row, index, "equipmentSlots", "Equipment", equipmentOptions,
+                      "No equipment in the directory. Add or import equipment first.",
+                    )}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-white px-4 py-3">
+          <p className="text-xs leading-5 text-muted-foreground">
+            All times use 24-hour format. Night shifts can finish the next morning.
+            Sorting changes display order only; saved order and Excel export order are unchanged.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={loading || saving}
+            onClick={() => setRows((current) => [...current, newRow()])}
+          >
+            <Plus className="size-4" /> Add Job
           </Button>
         </div>
       </section>
