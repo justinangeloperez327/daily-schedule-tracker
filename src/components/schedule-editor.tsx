@@ -272,13 +272,19 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const activeRow = rows.find((row) => row.key === activeJobKey) ?? rows[0] ?? null;
   const activeIndex = activeRow ? rows.findIndex((row) => row.key === activeRow.key) : -1;
 
-  const projectOptions: ComboboxOption[] = projects.map((project) => ({
-    value: project.id,
-    label: (project.jobNo || "No Job No.") + " — " + (project.name || "Unnamed Project"),
-    description: "SO No: " + (project.soNo || "—") + " · Job No: " +
-      (project.jobNo || "—") + " · " + (project.clientName || "No client"),
-    searchText: [project.jobNo, project.soNo, project.name, project.clientName].filter(Boolean).join(" "),
-  }));
+  const projectOptions: ComboboxOption[] = projects.map((project) => {
+    const projectName = (project.name || "").trim();
+    const hasName = !!projectName && !/^unnamed project$/i.test(projectName);
+    const jobNo = project.jobNo?.trim() || "No Job No.";
+    const clientName = project.clientName?.trim() || "Client not specified";
+    const soNo = project.soNo?.trim() || "—";
+    return {
+      value: project.id,
+      label: jobNo + " — " + (hasName ? projectName : clientName),
+      searchText: [project.jobNo, project.soNo, project.name, project.clientName].filter(Boolean).join(" "),
+      project: { jobNo, projectName, clientName, soNo, hasName },
+    };
+  });
 
   const employeeOptions: ComboboxOption[] = employees.map((employee) => ({
     value: employee.id,
@@ -297,10 +303,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     value: equipment.id,
     label: [equipment.fleet, equipment.description || equipment.vehicleDetails].filter(Boolean).join(" — ") ||
       equipment.registrationNo || "Unnamed Equipment",
-    description: [
-      equipment.ratePerDay ? "Daily rate: " + equipment.ratePerDay : "",
-      equipment.ratePerHour ? "Hourly rate: " + equipment.ratePerHour : "",
-    ].filter(Boolean).join(" · "),
+    // Equipment prices belong in the Equipment register, not in assignment cards.
     searchText: [
       equipment.fleet, equipment.description, equipment.registrationNo,
       equipment.vehicleDetails, equipment.vehicleType,
@@ -522,7 +525,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                         value={row.projectId}
                         onValueChange={(value) => patch(row.key, "projectId", value)}
                         options={projectOptions}
-                        placeholder="Search Job No, SO No or project name..."
+                        placeholder="Search job, project, client or SO No..."
                         disabled={saving}
                       />
                       {projects.length === 0 && (

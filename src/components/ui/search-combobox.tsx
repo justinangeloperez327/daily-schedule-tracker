@@ -11,7 +11,48 @@ export type ComboboxOption = {
   description?: string;
   searchText?: string;
   disabled?: boolean;
+  // Project-specific metadata is only rendered for the job selector.
+  project?: {
+    jobNo: string;
+    projectName: string;
+    clientName: string;
+    soNo: string;
+    hasName: boolean;
+  };
 };
+
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  const terms = [...new Set(query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean))];
+  if (!terms.length) return <>{text}</>;
+  const lower = text.toLocaleLowerCase();
+  const ranges: { start: number; end: number }[] = [];
+  for (const term of terms) {
+    let cursor = 0;
+    while (cursor < lower.length) {
+      const start = lower.indexOf(term, cursor);
+      if (start < 0) break;
+      ranges.push({ start, end: start + term.length });
+      cursor = start + term.length;
+    }
+  }
+  ranges.sort((a, b) => a.start - b.start || a.end - b.end);
+  const merged: typeof ranges = [];
+  for (const range of ranges) {
+    const previous = merged[merged.length - 1];
+    if (previous && range.start <= previous.end) previous.end = Math.max(previous.end, range.end);
+    else merged.push({ ...range });
+  }
+  if (!merged.length) return <>{text}</>;
+  const segments: React.ReactNode[] = [];
+  let from = 0;
+  merged.forEach(({ start, end }, index) => {
+    if (start > from) segments.push(text.slice(from, start));
+    segments.push(<mark key={index} className="rounded-sm bg-[#DDEBFA] text-inherit">{text.slice(start, end)}</mark>);
+    from = end;
+  });
+  if (from < text.length) segments.push(text.slice(from));
+  return <>{segments}</>;
+}
 
 type Props = {
   label: string;
@@ -37,10 +78,22 @@ export function SearchCombobox({ label, value, onValueChange, options, placehold
   const selected = options.find((option) => option.value === value);
   const filtered = React.useMemo(() => {
     const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-    return options.filter((option) => {
+    const matches = options.filter((option) => {
       const text = [option.label, option.description, option.searchText].filter(Boolean).join(" ").toLocaleLowerCase();
       return terms.every((term) => text.includes(term));
-    }).slice(0, 100);
+    });
+    if (terms.length && matches.some((option) => option.project)) {
+      const firstTerm = terms[0];
+      const priority = (option: ComboboxOption) => {
+        if (!option.project) return 5;
+        const { jobNo, projectName, clientName, soNo } = option.project;
+        const fields = [jobNo, projectName, clientName, soNo];
+        const index = fields.findIndex((field) => field.toLocaleLowerCase().startsWith(firstTerm));
+        return index === -1 ? 4 : index;
+      };
+      matches.sort((a, b) => priority(a) - priority(b));
+    }
+    return matches.slice(0, 100);
   }, [options, query]);
 
   const updatePosition = React.useCallback(() => {
@@ -53,12 +106,14 @@ export function SearchCombobox({ label, value, onValueChange, options, placehold
     const roomBelow = window.innerHeight - rect.bottom - 12;
     const roomAbove = rect.top - 12;
     const useAbove = roomBelow < 200 && roomAbove > roomBelow;
-    const maxHeight = Math.max(100, Math.min(320, useAbove ? roomAbove - 6 : roomBelow - 6));
+    const isProjectPicker = options.some((option) => option.project);
+    const maxHeight = Math.max(100, Math.min(isProjectPicker ? 480 : 320,
+      useAbove ? roomAbove - 6 : roomBelow - 6));
     setPosition({
       left, width, maxHeight,
       top: useAbove ? Math.max(12, rect.top - maxHeight - 6) : rect.bottom + 6,
     });
-  }, []);
+  }, [options]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -80,6 +135,13 @@ export function SearchCombobox({ label, value, onValueChange, options, placehold
       window.removeEventListener("resize", handleReposition);
     };
   }, [open, updatePosition]);
+
+  React.useEffect(() => {
+    if (!open || !menuRef.current) return;
+    menuRef.current.querySelector<HTMLElement>(
+      '[data-option-index="' + activeIndex + '"]'
+    )?.scrollIntoView({ block: "nearest" });
+  }, [open, activeIndex]);
 
   function choose(option: ComboboxOption) {
     if (option.disabled) return;
@@ -170,6 +232,7 @@ export function SearchCombobox({ label, value, onValueChange, options, placehold
                 key={option.value}
                 id={listId + "-option-" + index}
                 role="option"
+                data-option-index={index}
                 aria-selected={option.value === value}
                 aria-disabled={option.disabled || undefined}
                 className={cn(
@@ -179,12 +242,40 @@ export function SearchCombobox({ label, value, onValueChange, options, placehold
                   !option.disabled && index === activeIndex && "bg-[var(--table-hover)]"
                 )}
                 onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => choose(option)}
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block break-words font-medium leading-5">{option.label}</span>
-                  {option.description && (
-                    <span className="mt-1 block break-words text-xs leading-4 text-muted-foreground">{option.description}</span>
+                  {option.project ? (
+                    <span className="block min-w-0 space-y-1">
+                      <span className="block break-words font-mono text-[12px] font-semibold leading-5 text-primary">
+                        <HighlightMatch text={option.project.jobNo} query={query} />
+                      </span>
+                      <span className={"block break-words text-[13px] leading-5 " +
+                        (option.project.hasName ? "font-medium text-foreground" : "font-medium text-[#365F91]")}>
+                        <HighlightMatch
+                          text={option.project.hasName ? option.project.projectName : option.project.clientName}
+                          query={query}
+                        />
+                      </span>
+                      <span className="block break-words text-[11px] leading-4 text-muted-foreground">
+                        {option.project.hasName ? (
+                          <>Client: <HighlightMatch text={option.project.clientName} query={query} />{" · "}</>
+                        ) : (
+                          <>Project name not recorded{" · "}</>
+                        )}
+                        SO: <HighlightMatch text={option.project.soNo} query={query} />
+                      </span>
+                    </span>
+                  ) : (
+                    <>
+                      <span className="block break-words font-medium leading-5">{option.label}</span>
+                      {option.description && (
+                        <span className="mt-1 block break-words text-xs leading-4 text-muted-foreground">
+                          {option.description}
+                        </span>
+                      )}
+                    </>
                   )}
                 </span>
                 {value === option.value && <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />}

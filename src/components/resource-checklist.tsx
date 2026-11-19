@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { GripVertical, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ComboboxOption } from "@/components/ui/search-combobox";
 
@@ -67,7 +67,7 @@ export function ResourceChecklist({
         aria-label={title + " for job " + jobNumber}
         tabIndex={0}
         className={(fillHeight ? "min-h-0 flex-1" : "h-56 min-h-0") +
-          " overflow-y-auto overscroll-contain bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
+          " space-y-2 overflow-y-auto overscroll-contain bg-white p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
       >
         {filtered.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs leading-5 text-muted-foreground">
@@ -91,13 +91,11 @@ export function ResourceChecklist({
                 aria-label={assigned
                   ? item.label + " already assigned to Job " + assignedJobs.join(", ")
                   : "Assign " + item.label + " to selected Job " + jobNumber}
-                className={"flex w-full min-w-0 items-start gap-2 border-b border-border/70 px-2.5 py-3 text-left transition-colors last:border-b-0 " +
-                  (assigned ? "cursor-not-allowed bg-muted/70 opacity-60" :
-                    item.invalid ? "cursor-not-allowed bg-amber-50 opacity-75" :
-                      "cursor-grab bg-white hover:bg-[#EAF2FC] active:cursor-grabbing")}
+                className={"flex w-full min-w-0 items-start rounded-lg border px-3 py-3 text-left shadow-[0_1px_3px_rgba(23,43,69,0.035)] transition-colors " +
+                  (assigned ? "cursor-not-allowed border-border bg-muted/70 opacity-60" :
+                    item.invalid ? "cursor-not-allowed border-amber-200 bg-amber-50 opacity-75" :
+                      "cursor-grab border-border bg-white hover:border-[#9DB5D1] hover:bg-[#EAF2FC] active:cursor-grabbing")}
               >
-                <GripVertical aria-hidden="true" className={"mt-0.5 size-4 shrink-0 " +
-                  (canDrag ? "text-[#365F91]" : "text-muted-foreground")} />
                 <span className="min-w-0 flex-1">
                   <span className="block break-words text-xs font-semibold leading-5 text-primary">
                     {item.label}
