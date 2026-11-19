@@ -295,10 +295,16 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
 
   const equipmentOptions: ComboboxOption[] = equipments.map((equipment) => ({
     value: equipment.id,
-    label: equipment.vehicleDetails || equipment.registrationNo || "Unnamed Equipment",
-    description: [equipment.registrationNo, equipment.vehicleType].filter(Boolean).join(" · "),
-    searchText: [equipment.registrationNo, equipment.vehicleDetails, equipment.vehicleType]
-      .filter(Boolean).join(" "),
+    label: [equipment.fleet, equipment.description || equipment.vehicleDetails].filter(Boolean).join(" — ") ||
+      equipment.registrationNo || "Unnamed Equipment",
+    description: [
+      equipment.ratePerDay ? "Daily rate: " + equipment.ratePerDay : "",
+      equipment.ratePerHour ? "Hourly rate: " + equipment.ratePerHour : "",
+    ].filter(Boolean).join(" · "),
+    searchText: [
+      equipment.fleet, equipment.description, equipment.registrationNo,
+      equipment.vehicleDetails, equipment.vehicleType,
+    ].filter(Boolean).join(" "),
   }));
 
   function renderResourceList(
@@ -323,11 +329,11 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
       const equipment = equipments.find((item) => item.id === id);
       enriched.push({
         value: id,
-        label: employee?.name || equipment?.vehicleDetails || "Unknown resource (" + id + ")",
+        label: employee?.name || equipment?.description || equipment?.fleet || equipment?.vehicleDetails || "Unknown resource (" + id + ")",
         description: field === "foremanSlots" && employee
           ? "Designation: " + (employee.designation || "not set") + " · Site Foreman required"
           : "Resource is no longer eligible or available in the directory",
-        searchText: [employee?.employeeCode, equipment?.registrationNo, id].filter(Boolean).join(" "),
+        searchText: [employee?.employeeCode, equipment?.fleet, equipment?.registrationNo, id].filter(Boolean).join(" "),
         invalid: true,
         assignedJobs: assignedJobs(field, id),
       });
@@ -661,6 +667,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                                     ? employees.find((person) => person.id === id) : undefined;
                                   const name = employee?.name ||
                                     options.find((option) => option.value === id)?.label ||
+                                    equipmentOptions.find((option) => option.value === id)?.label ||
                                     equipments.find((equipment) => equipment.id === id)?.vehicleDetails ||
                                     "Unknown resource";
                                   return (

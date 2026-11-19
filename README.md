@@ -79,7 +79,7 @@ Each catalog page now has **Import Excel** and a **Download Excel template** opt
 
 **Employee columns:** Employee ID, Name, Designation, Location, Category, Joining Date, Remarks.
 
-**Equipment columns:** Registration No, Vehicle Type, Vehicle Details, Limit, Model Year, Remarks.
+**Equipment columns:** Fleet, Description, Rate per Day, Rate per Hour.
 
 - Headers are matched case-insensitively and ignore punctuation/spaces. The Excel typo `Contract Vaue` is also recognized.
 - Import limit: 5 MB and 1,000 non-empty rows per `.xlsx` file.
@@ -293,3 +293,11 @@ The job card's **Assigned resources** area shows **Employee ID | Name | Position
 **Scope of Work** is no longer an editable field in Create/Edit Schedule. After choosing a project, the job card displays its **Main Category** and **Subcategory** directly from project master data, as read-only context, while keeping the separate multiline **Daily Target** for the specific activities planned that day. In the Excel dispatch export, the former Scope column is replaced by **Main Category** and **Subcategory** populated from the selected project; the Daily Target column stays.
 
 The schedule API no longer requires a manually entered scope (`scope` defaults to an empty string for new API requests). The legacy `ScheduleJob.scope` database field and existing historical scope values remain intact; editing an older job preserves its previous stored scope, although the field is no longer shown or editable. No database migration is needed. Existing project metadata and assignments remain unchanged.
+
+## Equipment fleet and rates register (Nov 2026)
+
+Equipment has exactly four visible columns, used consistently in the table, Add/Edit form, Excel template and import preview: **Fleet, Description, Rate per Day, Rate per Hour**. Rates are optional, non-negative numeric values limited to two decimal places; PostgreSQL uses `DECIMAL(12,2)` to retain currency-style precision, but the app does not impose a currency or compute totals. Rate cells sort numerically rather than alphabetically.
+
+An additive Prisma migration creates these four fields and preserves equipment IDs, all existing job-to-equipment assignments and the old data columns. For existing equipment it copies **Registration No -> Fleet** and **Vehicle Details -> Description**; the original registration/vehicle details/type/limit/model/year/remarks remain stored for backward compatibility but are not editable in the new form. Rates are intentionally blank (`NULL`) until entered. The legacy fields receive empty-string defaults to allow new four-field records without losing the legacy schema. The equipment search and drag cards show Fleet/Description, with optional daily and hourly rate metadata; dispatch Excel exports use the same descriptive equipment label.
+
+The equipment import parser also recognizes legacy `Registration No` and `Vehicle Details` column headings for Fleet and Description. Rates can be omitted in imported sheets. Existing code that looks up equipment by ID remains compatible. No automatic Vercel deployments; run a **manual** deployment to apply the new migration through `npm run vercel-build`.

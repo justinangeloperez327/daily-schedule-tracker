@@ -41,7 +41,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [sort, setSort] = React.useState<{ key: string; direction: TableSortDirection }>(() => ({
-    key: kind === "equipments" ? "vehicleDetails" : "name",
+    key: kind === "equipments" ? "fleet" : "name",
     direction: "asc",
   }));
   const [error, setError] = React.useState("");
@@ -77,11 +77,18 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
         (field) => getValue(record, field.key).toLowerCase().includes(query.trim().toLowerCase())
       )
     )
-    .sort((a, b) =>
-      compareTableValues(getValue(a, sort.key), getValue(b, sort.key), sort.direction) ||
-      compareTableValues(getValue(a, "name") || getValue(a, "vehicleDetails"), getValue(b, "name") || getValue(b, "vehicleDetails"), "asc") ||
-      compareTableValues(a.id, b.id, "asc")
-    );
+    .sort((a, b) => {
+      const isRate = kind === "equipments" && (sort.key === "ratePerDay" || sort.key === "ratePerHour");
+      const aValue = getValue(a, sort.key);
+      const bValue = getValue(b, sort.key);
+      const primary = isRate
+        ? compareTableValues(aValue === "" ? null : Number(aValue), bValue === "" ? null : Number(bValue), sort.direction)
+        : compareTableValues(aValue, bValue, sort.direction);
+      return primary ||
+        compareTableValues(getValue(a, "name") || getValue(a, "fleet") || getValue(a, "description"),
+          getValue(b, "name") || getValue(b, "fleet") || getValue(b, "description"), "asc") ||
+        compareTableValues(a.id, b.id, "asc");
+    });
   const visibleFields = kind === "projects"
     ? config.fields.filter((field) => !hiddenProjectColumns.has(field.key))
     : config.fields;
@@ -133,7 +140,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
         const updated = editingId
           ? current.map((item) => item.id === editingId ? record : item)
           : [...current, record];
-        const sortKey = kind === "equipments" ? "vehicleDetails" : "name";
+        const sortKey = kind === "equipments" ? "fleet" : "name";
         return [...updated].sort((a, b) => getValue(a, sortKey).localeCompare(getValue(b, sortKey)));
       });
       setError("");
@@ -231,7 +238,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
         <p className="px-3 py-2 text-xs text-muted-foreground sm:hidden">
           Scroll the table sideways to view all columns.
         </p>
-        <Table className={kind === "projects" ? "min-w-[1240px] table-auto" : "min-w-[960px] table-auto"}>
+        <Table className={kind === "projects" ? "min-w-[1240px] table-auto" : kind === "equipments" ? "min-w-[760px] table-auto" : "min-w-[960px] table-auto"}>
           <TableHeader className="bg-[#f0f5fa]">
             <TableRow className="h-9">
               {visibleFields.map((field) => (
@@ -240,7 +247,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                   label={field.label}
                   direction={sort.key === field.key ? sort.direction : undefined}
                   onSort={() => sortBy(field.key)}
-                  className={["name", "clientName", "vehicleDetails", "remarks", "projectInCharge"].includes(field.key)
+                  className={["name", "clientName", "description", "remarks", "projectInCharge"].includes(field.key)
                     ? "h-9 min-w-[220px] px-4 py-1.5"
                     : "h-9 min-w-[116px] px-4 py-1.5"}
                 />
@@ -276,7 +283,12 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                       )
                     ) : (
                       <span className="block max-w-[340px] truncate">
-                        {getValue(record, field.key) || "—"}
+                        {kind === "equipments" && ["ratePerDay", "ratePerHour"].includes(field.key) &&
+                        getValue(record, field.key) !== "" && Number.isFinite(Number(getValue(record, field.key)))
+                          ? Number(getValue(record, field.key)).toLocaleString("en-AE", {
+                              minimumFractionDigits: 2, maximumFractionDigits: 2,
+                            })
+                          : getValue(record, field.key) || "—"}
                       </span>
                     )}
                   </TableCell>
@@ -284,7 +296,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                 <TableCell className={(density === "comfortable" ? "py-0.5" : "py-0") + " px-3.5 align-top"}>
                   <div className="flex justify-end">
                     <RowActionsMenu
-                      itemName={getValue(record, "name") || getValue(record, "vehicleDetails") || record.id}
+                      itemName={getValue(record, "name") || getValue(record, "fleet") || getValue(record, "description") || record.id}
                       viewHref={kind === "projects" ? "/projects/" + encodeURIComponent(record.id) : undefined}
                       onEdit={() => edit(record)}
                       onDelete={() => { setDeleteTarget(record); setDeleteError(""); }}
@@ -332,7 +344,7 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
             <DialogTitle>Delete {config.singular.toLowerCase()}</DialogTitle>
             <DialogDescription>
               Delete {deleteTarget && (
-                getValue(deleteTarget, "name") || getValue(deleteTarget, "vehicleDetails") || deleteTarget.id
+                getValue(deleteTarget, "name") || getValue(deleteTarget, "fleet") || getValue(deleteTarget, "description") || deleteTarget.id
               )}? This can&apos;t be undone.
             </DialogDescription>
           </DialogHeader>
@@ -383,7 +395,9 @@ export function CatalogPage({ kind }: { kind: CatalogKind }) {
                       type={field.type ?? "text"}
                       value={draft[field.key] ?? ""}
                       required={field.required}
-                      maxLength={200}
+                      min={field.type === "number" ? 0 : undefined}
+                      step={field.type === "number" ? "0.01" : undefined}
+                      maxLength={field.type === "number" ? undefined : 200}
                       placeholder={field.placeholder}
                       onChange={(event) =>
                         setDraft((current) => ({ ...current, [field.key]: event.target.value }))

@@ -5,7 +5,7 @@ export type CatalogField = {
   label: string;
   placeholder?: string;
   required?: boolean;
-  type?: "date" | "text";
+  type?: "date" | "text" | "number";
   importOptional?: boolean;
 };
 
@@ -52,15 +52,13 @@ export const catalogConfigs: Record<
   equipments: {
     title: "Equipments",
     singular: "Equipment",
-    subtitle: "Equipment and vehicle register with registration and model details.",
-    identity: "registrationNo",
+    subtitle: "Equipment fleet register with descriptions and daily/hourly rates.",
+    identity: "fleet",
     fields: [
-      { key: "registrationNo", label: "Registration No" },
-      { key: "vehicleType", label: "Vehicle Type" },
-      { key: "vehicleDetails", label: "Vehicle Details", required: true },
-      { key: "limit", label: "Limit" },
-      { key: "modelYear", label: "Model Year" },
-      { key: "remarks", label: "Remarks" },
+      { key: "fleet", label: "Fleet", placeholder: "Fleet number or identifier", importOptional: true },
+      { key: "description", label: "Description", required: true, placeholder: "Equipment or vehicle description" },
+      { key: "ratePerDay", label: "Rate per Day", type: "number", placeholder: "0.00", importOptional: true },
+      { key: "ratePerHour", label: "Rate per Hour", type: "number", placeholder: "0.00", importOptional: true },
     ],
   },
 };

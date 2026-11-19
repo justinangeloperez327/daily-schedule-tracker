@@ -183,7 +183,7 @@ export function ImportExcelDialog({
                           <td className="px-4 py-1.5">{row.rowNumber}</td>
                           <td className="px-4 py-1.5">{row.data[identity] || "—"}</td>
                           <td className="min-w-40 max-w-80 whitespace-normal break-words [overflow-wrap:anywhere] px-4 py-1.5">
-                            {row.data[kind === "projects" ? "name" : kind === "employees" ? "name" : "vehicleDetails"] || "—"}
+                            {row.data[kind === "projects" ? "name" : kind === "employees" ? "name" : "description"] || "—"}
                           </td>
                         </tr>
                       ))}

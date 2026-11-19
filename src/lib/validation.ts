@@ -7,6 +7,10 @@ const requiredText = z.string().trim().min(1).max(200);
 const optionalText = z.string().trim().max(200).default("");
 const notesText = z.string().trim().max(5000).default("");
 const optionalIdentifier = z.string().trim().max(200).nullable().default(null).transform((value) => value || null);
+const optionalRate = z.string().trim().refine(
+  (value) => value === "" || /^(?:0|[1-9]\\d{0,9})(?:\\.\\d{1,2})?$/.test(value),
+  "Enter a non-negative rate with at most two decimal places.",
+).transform((value) => value || null);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const [year, month, day] = value.split("-").map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
@@ -44,12 +48,10 @@ export const employeeInput = z.object({
 }).strict();
 
 export const equipmentInput = z.object({
-  registrationNo: optionalIdentifier,
-  vehicleType: optionalText,
-  vehicleDetails: requiredText,
-  limit: optionalText,
-  modelYear: optionalText,
-  remarks: notesText,
+  fleet: optionalText,
+  description: requiredText,
+  ratePerDay: optionalRate,
+  ratePerHour: optionalRate,
 }).strict();
 
 // Excel imports are intentionally lenient: an incomplete spreadsheet row is
@@ -68,7 +70,7 @@ export const employeeImportInput = employeeInput.extend({
 });
 
 export const equipmentImportInput = equipmentInput.extend({
-  vehicleDetails: optionalText,
+  description: optionalText,
 });
 
 export const scheduleInput = z.object({

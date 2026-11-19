@@ -30,6 +30,10 @@ export type Employee = {
 
 export type Equipment = {
   id: string;
+  fleet: string;
+  description: string;
+  ratePerDay: string | null;
+  ratePerHour: string | null;
   registrationNo: string | null;
   vehicleType: string;
   vehicleDetails: string;

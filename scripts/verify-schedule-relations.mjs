@@ -35,10 +35,16 @@ try {
   }
   for (const [index, id] of equipment.entries()) {
     await db.query(
-      'INSERT INTO "Equipment" ("id", "vehicleType", "vehicleDetails", "updatedAt") VALUES ($1, $2, $3, NOW())',
-      [id, "Vehicle", "Test equipment " + index]
+      'INSERT INTO "Equipment" ("id", "vehicleType", "vehicleDetails", "fleet", "description", "ratePerDay", "ratePerHour", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())',
+      [id, "Vehicle", "Test equipment " + index, "FLEET-" + index,
+        "Equipment description " + index, "250.50", "35.25"]
     );
   }
+  const fleetRate = await db.query('SELECT "fleet", "description", "ratePerDay"::text AS "ratePerDay", "ratePerHour"::text AS "ratePerHour" FROM "Equipment" WHERE "id" = $1', [equipment[0]]);
+  assert.equal(fleetRate.rows[0].fleet, "FLEET-0");
+  assert.equal(fleetRate.rows[0].description, "Equipment description 0");
+  assert.equal(fleetRate.rows[0].ratePerDay, "250.50");
+  assert.equal(fleetRate.rows[0].ratePerHour, "35.25");
   await db.query(
     'INSERT INTO "Schedule" ("id", "date", "updatedAt") VALUES ($1, $2, NOW())',
     [scheduleId, "2026-11-17"]

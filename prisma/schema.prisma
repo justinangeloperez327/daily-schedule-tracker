@@ -53,9 +53,14 @@ model Employee {
 
 model Equipment {
   id             String         @id @default(cuid())
+  fleet          String         @default("")
+  description    String         @default("") @db.Text
+  ratePerDay     Decimal?       @db.Decimal(12, 2)
+  ratePerHour    Decimal?       @db.Decimal(12, 2)
+  // Preserve the previous import columns and historical values for compatibility.
   registrationNo String?
-  vehicleType    String
-  vehicleDetails String
+  vehicleType    String         @default("")
+  vehicleDetails String         @default("")
   limit          String         @default("")
   modelYear      String         @default("")
   remarks        String         @default("") @db.Text
@@ -63,6 +68,7 @@ model Equipment {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
+  @@index([fleet])
   @@index([vehicleDetails])
   @@index([registrationNo])
 }

@@ -16,6 +16,9 @@ const headerAliases: Record<string, string[]> = {
   descriptions: ["Description", "Descriptions"],
   soNo: ["SO No", "S.O. No", "So No"],
   registrationNo: ["Registration Number", "Registration No"],
+  // Accept old equipment spreadsheets without changing their stored master records.
+  fleet: ["Fleet No", "Fleet Number", "Registration No", "Registration Number"],
+  description: ["Vehicle Details", "Equipment Description", "Vehicle Description"],
   employeeCode: ["Employee Number", "Employee ID"],
   projectInCharge: ["Project In-Charge", "Project In Charge"],
 };
@@ -146,15 +149,16 @@ export async function downloadCatalogTemplate(kind: CatalogKind): Promise<void> 
   sheet.getRow(1).height = 28;
   fields.forEach((field, index) => {
     sheet.getColumn(index + 1).width =
-      ["descriptions", "remarks", "paymentTerms"].includes(field.key) ? 38 : 23;
+      ["descriptions", "description", "remarks", "paymentTerms"].includes(field.key) ? 38 : 23;
     const cell = sheet.getCell(1, index + 1);
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF20262E" } };
     cell.font = { name: "Aptos", bold: true, color: { argb: "FFFFFFFF" } };
     cell.alignment = { vertical: "middle" };
-    if (["jobNo", "employeeCode", "registrationNo", "soNo", "rev"].includes(field.key)) {
+    if (["jobNo", "employeeCode", "registrationNo", "fleet", "soNo", "rev"].includes(field.key)) {
       sheet.getColumn(index + 1).numFmt = "@";
     }
     if (field.key === "joiningDate") sheet.getColumn(index + 1).numFmt = "yyyy-mm-dd";
+    if (["ratePerDay", "ratePerHour"].includes(field.key)) sheet.getColumn(index + 1).numFmt = "#,##0.00";
   });
   sheet.views = [{ state: "frozen", ySplit: 1 }];
   const buffer = await workbook.xlsx.writeBuffer();

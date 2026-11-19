@@ -56,7 +56,7 @@ export async function exportDispatchSheet(
       client: project?.clientName || "",
       foremen: names(entry.foremanIds),
       labours: names(entry.employeeIds),
-      equipment: entry.equipmentIds.map((id) => equipments.find((e) => e.id === id)?.vehicleDetails || "Unnamed equipment").join(", "),
+      equipment: entry.equipmentIds.map((id) => ((equipment) => equipment ? ([equipment.fleet, equipment.description || equipment.vehicleDetails].filter(Boolean).join(" — ") || "Unnamed equipment") : "Unnamed equipment")(equipments.find((e) => e.id === id))).join(", "),
       shift: entry.shift,
       mainCategory: project?.mainCategory || "",
       subCategory: project?.subCategory || "",
