@@ -268,7 +268,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const displayedRows = rows.map((row, index) => ({ row, index }));
   const activeRow = rows.find((row) => row.key === activeJobKey) ?? rows[0] ?? null;
   const activeIndex = activeRow ? rows.findIndex((row) => row.key === activeRow.key) : -1;
-  const activeProject = activeRow ? projects.find((project) => project.id === activeRow.projectId) : undefined;
 
   const projectOptions: ComboboxOption[] = projects.map((project) => ({
     value: project.id,
@@ -335,11 +334,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         title={title}
         jobNumber={index + 1}
         options={enriched}
-        selectedIds={chosen}
         onAssign={(resourceId) => assignResource(row.key, field, resourceId)}
         onDragStart={(event, resourceId) => startResourceDrag(event, field, resourceId)}
         onDragEnd={stopResourceDrag}
-        maxSelected={assignmentLimits[field]}
         disabled={loading || saving}
         emptyHint={emptyHint}
         fillHeight
@@ -714,19 +711,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             <div className="shrink-0 border-b border-border bg-[#F8FAFD] px-3 py-3">
               <p className="technical-eyebrow">PLANNING / RESOURCES</p>
               <h3 className="mt-1 text-sm font-semibold text-primary">Resource Assignments</h3>
-              {activeRow ? (
-                <div className="mt-2 min-w-0">
-                  <p className="font-mono text-[11px] text-[#365F91]">JOB {String(activeIndex + 1).padStart(2, "0")}</p>
-                  <p className="mt-0.5 break-words text-xs font-medium text-primary">
-                    {activeProject?.name || "Select a project"}
-                  </p>
-                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                    Checking resources below updates only this job.
-                  </p>
-                </div>
-              ) : (
-                <p className="mt-2 text-xs text-muted-foreground">Add a job to assign resources.</p>
-              )}
             </div>
             <div role="tablist" aria-label="Resource assignment categories" className="grid shrink-0 grid-cols-3 gap-0.5 border-b border-border bg-white px-2 pt-2">
               {([

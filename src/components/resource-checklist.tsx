@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { GripVertical, HardHat, Search, UsersRound, Wrench } from "lucide-react";
+import { GripVertical, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ComboboxOption } from "@/components/ui/search-combobox";
 
@@ -14,21 +14,17 @@ type ResourceChecklistProps = {
   title: "Foremen" | "Labourers" | "Equipment";
   jobNumber: number;
   options: PlanningResourceOption[];
-  selectedIds: string[];
   onAssign: (id: string) => void;
   onDragStart: (event: React.DragEvent<HTMLButtonElement>, id: string) => void;
   onDragEnd: () => void;
-  maxSelected: number;
   disabled?: boolean;
   emptyHint: string;
   fillHeight?: boolean;
 };
 
-const icons = { Foremen: HardHat, Labourers: UsersRound, Equipment: Wrench };
-
 export function ResourceChecklist({
-  title, jobNumber, options, selectedIds, onAssign, onDragStart, onDragEnd,
-  maxSelected, disabled = false, emptyHint, fillHeight = false,
+  title, jobNumber, options, onAssign, onDragStart, onDragEnd,
+  disabled = false, emptyHint, fillHeight = false,
 }: ResourceChecklistProps) {
   const [query, setQuery] = React.useState("");
   const filtered = React.useMemo(() => {
@@ -44,21 +40,11 @@ export function ResourceChecklist({
         return a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" });
       });
   }, [options, query]);
-  const Icon = icons[title];
   const inputId = React.useId();
 
   return (
     <section className={(fillHeight ? "h-full min-h-0 " : "") +
       "flex min-w-0 flex-col rounded-lg border border-border bg-white"}>
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-[#F8FAFD] px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Icon aria-hidden="true" className="size-4 shrink-0 text-[#365F91]" />
-          <h4 className="truncate text-sm font-semibold text-primary">{title}</h4>
-        </div>
-        <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 font-mono text-[11px] tabular-nums text-[#365F91]">
-          {selectedIds.length} assigned
-        </span>
-      </div>
       <div className="shrink-0 px-3 pb-2 pt-3">
         <label htmlFor={inputId} className="sr-only">
           Search {title.toLowerCase()} for job {jobNumber}
@@ -75,9 +61,6 @@ export function ResourceChecklist({
             disabled={disabled}
           />
         </div>
-        <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-          Drag a resource card onto a job, or click to assign to the selected job.
-        </p>
       </div>
       <div
         role="group"
@@ -145,9 +128,6 @@ export function ResourceChecklist({
           })
         )}
       </div>
-      <p className="shrink-0 px-3 pb-3 text-[11px] leading-4 text-muted-foreground">
-        {selectedIds.length} / {maxSelected} assigned to selected job · Assigned cards cannot be dragged
-      </p>
     </section>
   );
 }

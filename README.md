@@ -273,3 +273,7 @@ A resource already assigned to a job in the **current daily plan** is shown disa
 For keyboard use or as an alternative to dragging, click an available resource card to assign it to the currently selected job. The same validation applies: resource eligibility, no duplicate assignment, and original per-job caps. A drop to a mismatched category has no effect. The fixed job order is retained for saving and Excel export; dragging does not reorder jobs. Assignment availability currently reflects **only jobs in the plan being edited**, not other stored schedules, leave or maintenance.
 
 Implementation uses native browser drag events; no extra library or database migration is needed. No automatic Vercel deployment.
+
+## Compact Resource Assignments sidebar (Nov 2026)
+
+The shared sticky right-hand panel now contains only the **Resource Assignments** title, **Foremen | Labours | Equipments** tabs, search field, and scrollable draggable resource cards. Removed the repeated selected-job metadata (Job number, project name, and "checking resources" helper) and the duplicate in-panel category heading/assigned-count badge. Redundant instructional copy and footer counts are also removed to give the list more vertical space. Job cards continue to show the active selection and per-category assigned resources. Drag, click-to-assign, global-in-plan disabled state, and unassign behavior are unchanged.
