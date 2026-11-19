@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { Project, Employee, Equipment } from "@/lib/catalog";
 import { emptyDispatch, scopeOptions, type DispatchEntry, type DispatchSheet } from "@/lib/dispatch";
@@ -55,6 +56,7 @@ function newRow(): EditorRow {
     equipmentSlots: [],
     shift: draft.shift,
     scope: draft.scope,
+    dailyTarget: draft.dailyTarget,
     campStart: draft.campStart,
     timeIn: draft.timeIn,
     timeOut: draft.timeOut,
@@ -109,6 +111,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           equipmentSlots: r.equipmentIds.map((id) => assignmentSlot(id)),
           shift: r.shift,
           scope: r.scope,
+          dailyTarget: r.dailyTarget ?? "",
           campStart: r.campStart || "06:00",
           timeIn: r.timeIn,
           timeOut: r.timeOut,
@@ -378,6 +381,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         projectId: r.projectId, foremanIds: selectedIds(r, "foremanSlots"),
         employeeIds: selectedIds(r, "labourSlots"),
         equipmentIds: selectedIds(r, "equipmentSlots"), shift: r.shift, scope: r.scope.trim(),
+        dailyTarget: r.dailyTarget.trim(),
         campStart: r.campStart, timeIn: r.timeIn, timeOut: r.timeOut,
       })) };
       await apiRequest<DispatchSheet>(sheetId ? "/api/schedules/" + encodeURIComponent(sheetId) : "/api/schedules", {
@@ -473,10 +477,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           {!loading && displayedRows.map(({ row, index }) => {
             const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
             const selectedProject = projects.find((project) => project.id === row.projectId);
-            const assignedCount =
-              selectedIds(row, "foremanSlots").length +
-              selectedIds(row, "labourSlots").length +
-              selectedIds(row, "equipmentSlots").length;
             const selected = activeRow?.key === row.key;
             return (
               <section
@@ -487,29 +487,20 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               >
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-[#F8FAFD] px-4 py-3 sm:px-5">
                   <div className="min-w-0 flex-1">
-                    <p className="technical-eyebrow">JOB {String(index + 1).padStart(2, "0")} / DISPATCH</p>
-                    <h3 id={"dispatch-job-" + row.key} className="mt-1 break-words text-base font-semibold text-primary">
-                      {selectedProject?.name || "Select project"}
+                    <h3 id={"dispatch-job-" + row.key}>
+                      <button
+                        type="button"
+                        aria-label={"Make Job " + (index + 1) + " active for resource assignment"}
+                        aria-pressed={selected}
+                        title={"Select Job " + (index + 1) + " for resource card clicks"}
+                        onClick={() => setActiveJobKey(row.key)}
+                        className="technical-eyebrow rounded-sm text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                      >
+                        JOB {String(index + 1).padStart(2, "0")} / DISPATCH
+                      </button>
                     </h3>
-                    <p className="mt-1 break-words text-xs text-muted-foreground">
-                      {selectedProject?.jobNo || "Job No not selected"} · {selectedProject?.clientName || "Client not selected"}
-                    </p>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                      {assignedCount} assigned
-                    </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={selected ? "secondary" : "outline"}
-                      className="h-8"
-                      aria-pressed={selected}
-                      aria-label={"Assign resources to job " + (index + 1)}
-                      onClick={() => setActiveJobKey(row.key)}
-                    >
-                      {selected ? "Selected job" : "Select job"}
-                    </Button>
+                  <div className="flex shrink-0 items-center gap-2">
                     <RowActionsMenu
                       itemName={"dispatch job " + (index + 1)}
                       onDuplicate={() => duplicateJob(row.key)}
@@ -563,6 +554,19 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                           onChange={(event) => patch(row.key, "scope", event.target.value)}
                         />
                       )}
+                    </div>
+                    <div className="min-w-0 space-y-2">
+                      <Label htmlFor={row.key + "-daily-target"}>Daily Target</Label>
+                      <Textarea
+                        id={row.key + "-daily-target"}
+                        placeholder="Enter the expected work or activity for this job today..."
+                        rows={3}
+                        maxLength={5000}
+                        value={row.dailyTarget}
+                        onChange={(event) => patch(row.key, "dailyTarget", event.target.value)}
+                        className="min-h-[96px] w-full resize-y bg-white leading-5"
+                        disabled={saving}
+                      />
                     </div>
                   </div>
                   <div className="min-w-0 space-y-3">

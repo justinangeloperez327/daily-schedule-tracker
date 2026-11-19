@@ -45,6 +45,7 @@ export async function PUT(request: Request, context: Context) {
           sortOrder: index,
           shift: job.shift,
           scope: job.scope,
+          dailyTarget: job.dailyTarget,
           campStart: job.campStart,
           timeIn: job.timeIn,
           timeOut: job.timeOut,

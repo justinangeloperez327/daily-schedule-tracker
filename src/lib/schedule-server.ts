@@ -30,6 +30,7 @@ export function scheduleDto(schedule: ScheduleRecord) {
       equipmentIds: job.equipments.map((assignment) => assignment.equipmentId),
       shift: job.shift,
       scope: job.scope,
+      dailyTarget: job.dailyTarget,
       campStart: job.campStart,
       timeIn: job.timeIn,
       timeOut: job.timeOut,

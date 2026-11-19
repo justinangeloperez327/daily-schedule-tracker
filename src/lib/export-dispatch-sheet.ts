@@ -25,13 +25,14 @@ export async function exportDispatchSheet(
     { header: "Equipment", key: "equipment", width: 28 },
     { header: "Shift", key: "shift", width: 13 },
     { header: "Scope", key: "scope", width: 25 },
+    { header: "Daily Target", key: "dailyTarget", width: 48 },
     { header: "Camp Start", key: "camp", width: 16 },
     { header: "Start Time", key: "start", width: 16 },
     { header: "End Time", key: "end", width: 16 },
   ];
 
   sheet.insertRow(1, ["DAILY TEAM DISPATCH SCHEDULE — " + dateLabel(date)]);
-  sheet.mergeCells("A1:K1");
+  sheet.mergeCells("A1:L1");
   sheet.getCell("A1").font = { bold: true, size: 16, color: { argb: "FF20262E" } };
   sheet.getCell("A1").alignment = { vertical: "middle" };
   sheet.getRow(1).height = 36;
@@ -57,11 +58,15 @@ export async function exportDispatchSheet(
       equipment: entry.equipmentIds.map((id) => equipments.find((e) => e.id === id)?.vehicleDetails || "Unnamed equipment").join(", "),
       shift: entry.shift,
       scope: entry.scope,
+      dailyTarget: entry.dailyTarget,
       camp: entry.campStart,
       start: entry.timeIn,
       end: entry.timeOut,
     });
-    row.height = 44;
+    // Taller rows keep multi-line daily targets readable in the exported plan.
+    const targetLines = (entry.dailyTarget || "").split("\n")
+      .reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 44)), 0);
+    row.height = Math.min(120, Math.max(44, targetLines * 15 + 10));
     row.eachCell({ includeEmpty: true }, (cell) => {
       cell.font = { name: "Aptos", color: { argb: "FF303740" } };
       cell.alignment = { vertical: "top", wrapText: true };
@@ -70,7 +75,7 @@ export async function exportDispatchSheet(
   });
 
   sheet.views = [{ state: "frozen", ySplit: 2 }];
-  sheet.autoFilter = { from: "A2", to: "K" + Math.max(2, sheet.rowCount) };
+  sheet.autoFilter = { from: "A2", to: "L" + Math.max(2, sheet.rowCount) };
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([new Uint8Array(buffer)], { type: MIME });
   const url = URL.createObjectURL(blob);

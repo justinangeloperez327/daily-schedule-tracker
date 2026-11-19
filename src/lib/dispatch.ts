@@ -8,6 +8,7 @@ export type DispatchEntry = {
   equipmentIds: string[];
   shift: DispatchShift;
   scope: string;
+  dailyTarget: string;
   campStart: string;
   timeIn: string;
   timeOut: string;
@@ -42,6 +43,7 @@ export function emptyDispatch(): DispatchEntry {
     equipmentIds: [],
     shift: "Day",
     scope: "",
+    dailyTarget: "",
     campStart: "06:00",
     timeIn: "07:00",
     timeOut: "17:00",

@@ -94,6 +94,7 @@ model ScheduleJob {
   timeIn       String
   timeOut      String
   scope        String         @db.Text
+  dailyTarget  String         @default("") @db.Text
   foremen      JobForeman[]
   labours      JobLabour[]
   equipments   JobEquipment[]

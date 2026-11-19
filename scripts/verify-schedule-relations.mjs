@@ -63,8 +63,13 @@ try {
     }
   }
 
+  // Exercise the new Daily Target field and preserve the default for older rows.
+  await db.query('UPDATE "ScheduleJob" SET "dailyTarget" = $2 WHERE "id" = $1', [
+    jobIds[0],
+    "Install delivered corner panels and top rail",
+  ]);
   const { rows } = await db.query(
-    `SELECT j."id",
+    `SELECT j."id", j."dailyTarget",
         COUNT(DISTINCT f."employeeId")::int AS foremen,
         COUNT(DISTINCT l."employeeId")::int AS labours,
         COUNT(DISTINCT e."equipmentId")::int AS equipment
@@ -81,6 +86,9 @@ try {
     assert.equal(job.foremen, 2);
     assert.equal(job.labours, 2);
     assert.equal(job.equipment, 2);
+    assert.equal(job.dailyTarget,
+      job.id === jobIds[0] ? "Install delivered corner panels and top rail" : "",
+      "Each job must retain its own Daily Target, with an empty default for legacy jobs");
   }
 
   await db.query('DELETE FROM "Schedule" WHERE "id" = $1', [scheduleId]);
