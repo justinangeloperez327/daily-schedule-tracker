@@ -19,13 +19,14 @@ type ResourceChecklistProps = {
   maxSelected: number;
   disabled?: boolean;
   emptyHint: string;
+  compact?: boolean;
 };
 
 const icons = { Foremen: HardHat, Labourers: UsersRound, Equipment: Wrench };
 
 export function ResourceChecklist({
   title, jobNumber, options, selectedIds, onToggle, maxSelected,
-  disabled = false, emptyHint,
+  disabled = false, emptyHint, compact = false,
 }: ResourceChecklistProps) {
   const [query, setQuery] = React.useState("");
   const selected = React.useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -76,7 +77,7 @@ export function ResourceChecklist({
         role="group"
         aria-label={title + " for job " + jobNumber}
         tabIndex={0}
-        className="mx-2 mb-2 h-56 min-h-0 space-y-1 overflow-y-scroll overscroll-contain rounded-md border border-border/80 bg-white p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"
+        className={(compact ? "h-36" : "h-56") + " mx-2 mb-2 min-h-0 space-y-1 overflow-y-scroll overscroll-contain rounded-md border border-border/80 bg-white p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
       >
         {filtered.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs leading-5 text-muted-foreground">

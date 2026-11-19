@@ -81,6 +81,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const [saving, setSaving] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
   const [removeTarget, setRemoveTarget] = React.useState<string | null>(null);
+  // A single resource panel edits the selected job; job cards never own extra pickers.
+  const [activeJobKey, setActiveJobKey] = React.useState<string | null>(null);
   const [sort, setSort] = React.useState<{ key: EditorSortKey; direction: TableSortDirection }>({
     key: "original", direction: "asc",
   });
@@ -151,23 +153,36 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
 
   function duplicateJob(rowKey: string) {
     if (saving) return;
+    const cloneKey = crypto.randomUUID();
     setRows((current) => current.flatMap((row) => {
       if (row.key !== rowKey) return [row];
       return [row, {
         ...row,
         id: undefined,
-        key: crypto.randomUUID(),
+        key: cloneKey,
         foremanSlots: row.foremanSlots.map((slot) => assignmentSlot(slot.resourceId)),
         labourSlots: row.labourSlots.map((slot) => assignmentSlot(slot.resourceId)),
         equipmentSlots: row.equipmentSlots.map((slot) => assignmentSlot(slot.resourceId)),
       }];
     }));
+    setActiveJobKey(cloneKey);
+    setError("");
+  }
+
+  function addJob() {
+    if (loading || saving) return;
+    const next = newRow();
+    setRows((current) => [...current, next]);
+    setActiveJobKey(next.key);
     setError("");
   }
 
   // A sorted table is only a view over rows: saving/exporting preserve original
   // schedule job order and every selector remains attached to its stable row key.
   const displayedRows = rows.map((row, index) => ({ row, index }));
+  const activeRow = rows.find((row) => row.key === activeJobKey) ?? rows[0] ?? null;
+  const activeIndex = activeRow ? rows.findIndex((row) => row.key === activeRow.key) : -1;
+  const activeProject = activeRow ? projects.find((project) => project.id === activeRow.projectId) : undefined;
   if (sort.key !== "original" || sort.direction === "desc") {
     const sortValue = (row: EditorRow, index: number): string | number => {
       switch (sort.key) {
@@ -262,6 +277,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         maxSelected={assignmentLimits[field]}
         disabled={loading || saving}
         emptyHint={emptyHint}
+        compact
       />
     );
   }
@@ -376,7 +392,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           <div>
             <h2 className="text-base font-semibold text-primary">Daily job planning</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              One card per job. Search, scroll and tick resources inside the Foremen, Labourers and Equipment panels.
+              Select a job on the left, then assign foremen, labourers and equipment using the shared resource panel on the right.
             </p>
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -410,7 +426,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               variant="outline"
               className="h-9"
               disabled={loading || saving}
-              onClick={() => setRows((current) => [...current, newRow()])}
+              onClick={addJob}
             >
               <Plus className="size-4" /> Add Job
             </Button>
@@ -426,13 +442,14 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           <div className="rounded-xl border border-border bg-white px-4 py-12 text-center">
             <p className="text-sm font-medium text-primary">No jobs in this schedule</p>
             <p className="mt-1 text-xs text-muted-foreground">Add a job to start assigning your team and equipment.</p>
-            <Button variant="outline" className="mt-4" onClick={() => setRows((current) => [...current, newRow()])}>
+            <Button variant="outline" className="mt-4" onClick={addJob}>
               <Plus className="size-4" /> Add Job
             </Button>
           </div>
         )}
 
-        <div className="space-y-4">
+        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(280px,1fr)]">
+          <div className="min-w-0 space-y-4">
           {!loading && displayedRows.map(({ row, index }) => {
             const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
             const selectedProject = projects.find((project) => project.id === row.projectId);
@@ -440,11 +457,13 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
               selectedIds(row, "foremanSlots").length +
               selectedIds(row, "labourSlots").length +
               selectedIds(row, "equipmentSlots").length;
+            const selected = activeRow?.key === row.key;
             return (
               <section
                 key={row.key}
                 aria-labelledby={"dispatch-job-" + row.key}
-                className="min-w-0 overflow-visible rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]"
+                className={"min-w-0 rounded-xl border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)] transition-colors " +
+                  (selected ? "border-[#365F91] ring-1 ring-[#365F91]/25" : "border-border")}
               >
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-[#F8FAFD] px-4 py-3 sm:px-5">
                   <div className="min-w-0 flex-1">
@@ -456,10 +475,21 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                       {selectedProject?.jobNo || "Job No not selected"} · {selectedProject?.clientName || "Client not selected"}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                      {assignedCount} resources selected
+                      {assignedCount} assigned
                     </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={selected ? "secondary" : "outline"}
+                      className="h-8"
+                      aria-pressed={selected}
+                      aria-label={"Assign resources to job " + (index + 1)}
+                      onClick={() => setActiveJobKey(row.key)}
+                    >
+                      {selected ? "Selected job" : "Select job"}
+                    </Button>
                     <RowActionsMenu
                       itemName={"dispatch job " + (index + 1)}
                       onDuplicate={() => duplicateJob(row.key)}
@@ -549,38 +579,92 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                   </div>
                 </div>
 
-                <div className="border-t border-border px-4 pb-4 pt-3 sm:px-5">
+                <div className="border-t border-border bg-[#FCFDFE] px-4 py-4 sm:px-5">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-semibold text-primary">Resource assignments</h4>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        Each panel has a search and its own scrollable list. Check a name or vehicle to assign it.
-                      </p>
-                    </div>
-                    <p className="font-mono text-[11px] text-muted-foreground">
-                      FOREMEN {selectedIds(row, "foremanSlots").length} ·
-                      LABOUR {selectedIds(row, "labourSlots").length} ·
-                      EQUIPMENT {selectedIds(row, "equipmentSlots").length}
-                    </p>
+                    <h4 className="text-sm font-semibold text-primary">Assigned resources</h4>
+                    <span className="text-xs text-muted-foreground">
+                      {selected ? "Manage in the resource panel →" : "Select this job to change assignments"}
+                    </span>
                   </div>
-                  <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {renderResourceList(
-                      row, index, "foremanSlots", "Foremen", foremanOptions,
-                      "No Site Foremen in the employee directory. Designation must be Site Foreman.",
-                    )}
-                    {renderResourceList(
-                      row, index, "labourSlots", "Labourers", employeeOptions,
-                      "No employees in the directory. Add or import labourers first.",
-                    )}
-                    {renderResourceList(
-                      row, index, "equipmentSlots", "Equipment", equipmentOptions,
-                      "No equipment in the directory. Add or import equipment first.",
-                    )}
+                  <div className="grid min-w-0 gap-3 sm:grid-cols-3">
+                    {([
+                      ["Foremen", "foremanSlots", foremanOptions],
+                      ["Labourers", "labourSlots", employeeOptions],
+                      ["Equipment", "equipmentSlots", equipmentOptions],
+                    ] as const).map(([title, field, options]) => {
+                      const ids = selectedIds(row, field);
+                      return (
+                        <div key={field} className="min-w-0 rounded-lg border border-border bg-white p-3">
+                          <p className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold text-[#365F91]">
+                            <span>{title}</span>
+                            <span className="font-mono tabular-nums text-muted-foreground">{ids.length}</span>
+                          </p>
+                          {ids.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">Not assigned</p>
+                          ) : (
+                            <ul className="space-y-1.5">
+                              {ids.slice(0, 5).map((id) => (
+                                <li key={id} className="break-words text-xs leading-5 text-foreground">
+                                  {options.find((option) => option.value === id)?.label ||
+                                    employees.find((person) => person.id === id)?.name ||
+                                    equipments.find((equipment) => equipment.id === id)?.vehicleDetails ||
+                                    "Unknown resource"}
+                                </li>
+                              ))}
+                              {ids.length > 5 && (
+                                <li className="text-xs text-muted-foreground">+{ids.length - 5} more</li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </section>
             );
           })}
+          </div>
+          <aside
+            aria-label="Shared resource assignments"
+            className="min-w-0 self-start rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)] lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain"
+          >
+            <div className="sticky top-0 z-10 border-b border-border bg-[#F8FAFD] px-3 py-3">
+              <p className="technical-eyebrow">PLANNING / RESOURCES</p>
+              <h3 className="mt-1 text-sm font-semibold text-primary">Resource Assignments</h3>
+              {activeRow ? (
+                <div className="mt-2 min-w-0">
+                  <p className="font-mono text-[11px] text-[#365F91]">JOB {String(activeIndex + 1).padStart(2, "0")}</p>
+                  <p className="mt-0.5 break-words text-xs font-medium text-primary">
+                    {activeProject?.name || "Select a project"}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                    Checking resources below updates only this job.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">Add a job to assign resources.</p>
+              )}
+            </div>
+            {activeRow ? (
+              <div className="space-y-3 p-2.5">
+                {renderResourceList(
+                  activeRow, activeIndex, "foremanSlots", "Foremen", foremanOptions,
+                  "No Site Foremen in the employee directory. Designation must be Site Foreman.",
+                )}
+                {renderResourceList(
+                  activeRow, activeIndex, "labourSlots", "Labourers", employeeOptions,
+                  "No employees in the directory. Add or import labourers first.",
+                )}
+                {renderResourceList(
+                  activeRow, activeIndex, "equipmentSlots", "Equipment", equipmentOptions,
+                  "No equipment in the directory. Add or import equipment first.",
+                )}
+              </div>
+            ) : (
+              <p className="p-4 text-xs text-muted-foreground">No job selected.</p>
+            )}
+          </aside>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-white px-4 py-3">
@@ -592,7 +676,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             variant="outline"
             size="sm"
             disabled={loading || saving}
-            onClick={() => setRows((current) => [...current, newRow()])}
+            onClick={addJob}
           >
             <Plus className="size-4" /> Add Job
           </Button>
@@ -619,6 +703,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             <Button variant="outline" type="button" onClick={() => setRemoveTarget(null)}>Cancel</Button>
             <Button variant="destructive" type="button" onClick={() => {
               setRows((current) => current.filter((row) => row.key !== removeTarget));
+              setActiveJobKey((current) => current === removeTarget ? null : current);
               setRemoveTarget(null);
               setError("");
             }}>
