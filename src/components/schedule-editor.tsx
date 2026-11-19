@@ -651,10 +651,15 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                           ) : (
                             <div className="min-w-0">
                               {field !== "equipmentSlots" && (
-                                <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,1fr)_20px] gap-x-2 border-b border-border px-2 pb-2 text-[10px] font-semibold uppercase leading-4 tracking-[0.025em] text-muted-foreground">
+                                <div className={(field === "foremanSlots"
+                                  ? "grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)_20px]"
+                                  : "grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,1fr)_20px]") +
+                                  " grid gap-x-2 border-b border-border px-2 pb-2 text-[10px] font-semibold uppercase leading-4 tracking-[0.025em] text-muted-foreground"}>
                                   <span className="min-w-0 break-words">Employee ID</span>
                                   <span className="min-w-0 break-words">Name</span>
-                                  <span className="min-w-0 break-words">Position / Designation</span>
+                                  {field === "labourSlots" && (
+                                    <span className="min-w-0 break-words">Designation</span>
+                                  )}
                                   <span className="sr-only">Action</span>
                                 </div>
                               )}
@@ -672,7 +677,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                                       key={id}
                                       className={field === "equipmentSlots"
                                         ? "flex min-w-0 items-start justify-between gap-1 rounded-md border border-border bg-[#F8FAFD] px-2 py-1.5"
-                                        : "grid min-w-0 grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,1fr)_20px] items-start gap-x-2 rounded-md border border-border bg-[#F8FAFD] px-2 py-1.5"}
+                                        : field === "foremanSlots"
+                                          ? "grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)_20px] items-start gap-x-2 rounded-md border border-border bg-[#F8FAFD] px-2 py-1.5"
+                                          : "grid min-w-0 grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,1fr)_20px] items-start gap-x-2 rounded-md border border-border bg-[#F8FAFD] px-2 py-1.5"}
                                     >
                                       {field !== "equipmentSlots" && (
                                         <span className="min-w-0 break-words font-mono text-[11px] leading-5 text-[#365F91]">
@@ -682,7 +689,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                                       <span className="min-w-0 break-words text-xs leading-5 text-foreground">
                                         {name}
                                       </span>
-                                      {field !== "equipmentSlots" && (
+                                      {field === "labourSlots" && (
                                         <span className="min-w-0 break-words text-[11px] leading-5 text-muted-foreground">
                                           {employee?.designation || "—"}
                                         </span>
