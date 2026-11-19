@@ -44,8 +44,8 @@ export function ResourceChecklist({
 
   return (
     <section className={(fillHeight ? "h-full min-h-0 " : "") +
-      "flex min-w-0 flex-col rounded-lg border border-border bg-white"}>
-      <div className="shrink-0 px-3 pb-2 pt-3">
+      "flex min-w-0 flex-col bg-white"}>
+      <div className="shrink-0 px-1 pb-2 pt-1">
         <label htmlFor={inputId} className="sr-only">
           Search {title.toLowerCase()} for job {jobNumber}
         </label>
@@ -67,7 +67,7 @@ export function ResourceChecklist({
         aria-label={title + " for job " + jobNumber}
         tabIndex={0}
         className={(fillHeight ? "min-h-0 flex-1" : "h-56 min-h-0") +
-          " mx-2 mb-2 space-y-1.5 overflow-y-scroll overscroll-contain rounded-md border border-border/80 bg-[#FCFDFE] p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
+          " overflow-y-auto overscroll-contain bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
       >
         {filtered.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs leading-5 text-muted-foreground">
@@ -91,10 +91,10 @@ export function ResourceChecklist({
                 aria-label={assigned
                   ? item.label + " already assigned to Job " + assignedJobs.join(", ")
                   : "Assign " + item.label + " to selected Job " + jobNumber}
-                className={"flex w-full min-w-0 items-start gap-2 rounded-md border px-2.5 py-2.5 text-left shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors " +
-                  (assigned ? "cursor-not-allowed border-[#DCE5EF] bg-[#EEF2F7] opacity-65" :
-                    item.invalid ? "cursor-not-allowed border-amber-200 bg-amber-50 opacity-75" :
-                      "cursor-grab border-[#DCE5EF] bg-white hover:border-[#365F91] hover:bg-[#EAF2FC] active:cursor-grabbing")}
+                className={"flex w-full min-w-0 items-start gap-2 border-b border-border/70 px-2.5 py-3 text-left transition-colors last:border-b-0 " +
+                  (assigned ? "cursor-not-allowed bg-muted/70 opacity-60" :
+                    item.invalid ? "cursor-not-allowed bg-amber-50 opacity-75" :
+                      "cursor-grab bg-white hover:bg-[#EAF2FC] active:cursor-grabbing")}
               >
                 <GripVertical aria-hidden="true" className={"mt-0.5 size-4 shrink-0 " +
                   (canDrag ? "text-[#365F91]" : "text-muted-foreground")} />
@@ -115,11 +115,6 @@ export function ResourceChecklist({
                   {!assigned && item.invalid && (
                     <span className="mt-1 block text-[11px] font-medium text-amber-800">
                       No longer eligible — remove from its job to clear
-                    </span>
-                  )}
-                  {canDrag && (
-                    <span className="mt-1 block text-[11px] text-[#365F91]">
-                      Drag to job or click to assign
                     </span>
                   )}
                 </span>

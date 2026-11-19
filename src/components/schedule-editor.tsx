@@ -432,9 +432,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         <div>
           <p className="technical-eyebrow mb-1.5">OPERATIONS / SCHEDULES / DISPATCH</p>
           <h1 className="text-[28px] font-semibold tracking-tight text-primary">{sheetId ? "Edit Schedule" : "Create Schedule"}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Drag available foremen, labourers and equipment from the right panel into a job assignment area.
-          </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button className="w-full sm:w-auto" variant="outline" disabled={loading || exporting || rows.length === 0} onClick={exportExcel}>
@@ -606,9 +603,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                 <div className="border-t border-border bg-[#FCFDFE] px-4 py-4 sm:px-5">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-sm font-semibold text-primary">Assigned resources</h4>
-                    <span className="text-xs text-muted-foreground">
-                      Drag from the resource panel or remove a resource here
-                    </span>
                   </div>
                   <div className="grid min-w-0 gap-3 sm:grid-cols-3">
                     {([
@@ -723,7 +717,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-white px-4 py-3">
             <p className="text-xs leading-5 text-muted-foreground">
               All times use 24-hour format. Night shifts can finish the next morning.
-              Drag cards from the resource panel to matching job sections. Remove an assignment to make its card available again.
             </p>
             <Button variant="outline" size="sm" disabled={loading || saving} onClick={addJob}>
               <Plus className="size-4" /> Add Job
