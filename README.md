@@ -287,3 +287,9 @@ A multiline **Daily Target** text area now sits beneath Scope of Work in each jo
 ## Assigned employee details in each job card (Nov 2026)
 
 The job card's **Assigned resources** area shows **Employee ID | Name | Position / Designation** as aligned columns for both **Foremen** and **Labourers**, with the existing individual **X** remove control. Values come from the employee master-data record (`employeeCode`, `name`, `designation`), not the internal database ID. Missing fields display a dash rather than fabricated values; long names and designations wrap without truncation. Equipment retains its simpler item list. Drag/drop assignment and the sticky tabbed sidebar are unchanged.
+
+## Project category replaces manual schedule scope (Nov 2026)
+
+**Scope of Work** is no longer an editable field in Create/Edit Schedule. After choosing a project, the job card displays its **Main Category** and **Subcategory** directly from project master data, as read-only context, while keeping the separate multiline **Daily Target** for the specific activities planned that day. In the Excel dispatch export, the former Scope column is replaced by **Main Category** and **Subcategory** populated from the selected project; the Daily Target column stays.
+
+The schedule API no longer requires a manually entered scope (`scope` defaults to an empty string for new API requests). The legacy `ScheduleJob.scope` database field and existing historical scope values remain intact; editing an older job preserves its previous stored scope, although the field is no longer shown or editable. No database migration is needed. Existing project metadata and assignments remain unchanged.

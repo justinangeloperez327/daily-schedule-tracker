@@ -98,7 +98,7 @@ export const scheduleJobInput = z.object({
   employeeIds: z.array(z.string().min(1).max(200)).min(1, "Select at least one labourer for each job.").max(150),
   equipmentIds: z.array(z.string().min(1).max(200)).min(1, "Select at least one equipment item for each job.").max(100),
   shift: z.enum(["Day", "Night"]),
-  scope: z.string().trim().min(1).max(200),
+  scope: z.string().trim().max(200).default(""),
   dailyTarget: z.string().trim().max(5000).default(""),
   campStart: time,
   timeIn: time,

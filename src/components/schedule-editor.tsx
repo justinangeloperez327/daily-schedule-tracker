@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { Project, Employee, Equipment } from "@/lib/catalog";
-import { emptyDispatch, scopeOptions, type DispatchEntry, type DispatchSheet } from "@/lib/dispatch";
+import { emptyDispatch, type DispatchEntry, type DispatchSheet } from "@/lib/dispatch";
 import { apiRequest } from "@/lib/http";
 import { dateKey, dateLabel } from "@/lib/schedule";
 
@@ -351,8 +351,8 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     if (saving || loading) return;
     if (!date) { setError("Select a date."); return; }
     if (!rows.length) { setError("Add at least one dispatch row."); return; }
-    const invalid = rows.findIndex((r) => !r.projectId || !r.scope.trim() || !r.campStart || !r.timeIn || !r.timeOut);
-    if (invalid >= 0) { setError("Row " + (invalid + 1) + ": select job and scope, and fill out all three times."); return; }
+    const invalid = rows.findIndex((r) => !r.projectId || !r.campStart || !r.timeIn || !r.timeOut);
+    if (invalid >= 0) { setError("Row " + (invalid + 1) + ": select a job and fill out all three times."); return; }
     const missingLabour = rows.findIndex((r) => selectedIds(r, "labourSlots").length === 0);
     if (missingLabour >= 0) {
       setError("Row " + (missingLabour + 1) + ": select at least one labour.");
@@ -475,7 +475,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
 
           <div className="min-w-0 space-y-4">
           {!loading && displayedRows.map(({ row, index }) => {
-            const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
             const selectedProject = projects.find((project) => project.id === row.projectId);
             const selected = activeRow?.key === row.key;
             return (
@@ -529,30 +528,25 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                         </Link>
                       )}
                       {selectedProject && (
-                        <p className="break-words text-xs leading-5 text-muted-foreground">
-                          SO: {selectedProject.soNo || "—"} · {selectedProject.clientName || "Client not specified"}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Scope of work *</Label>
-                      <SelectField
-                        label={"Scope of work for job " + (index + 1)}
-                        value={customScope ? "__other__" : row.scope}
-                        onChange={(value) => patch(row.key, "scope", value === "__other__" ? "Other" : value)}
-                      >
-                        <option value="">Select scope...</option>
-                        {scopeOptions.map((scope) => <option value={scope} key={scope}>{scope}</option>)}
-                        <option value="__other__">Other (specify)</option>
-                      </SelectField>
-                      {customScope && (
-                        <Input
-                          aria-label={"Custom scope for job " + (index + 1)}
-                          placeholder="Describe scope of work..."
-                          maxLength={200}
-                          value={row.scope}
-                          onChange={(event) => patch(row.key, "scope", event.target.value)}
-                        />
+                        <div className="space-y-2">
+                          <p className="break-words text-xs leading-5 text-muted-foreground">
+                            SO: {selectedProject.soNo || "—"} · {selectedProject.clientName || "Client not specified"}
+                          </p>
+                          <div className="grid min-w-0 grid-cols-2 gap-2">
+                            <div className="min-w-0 rounded-md border border-border bg-[#F8FAFD] px-3 py-2">
+                              <p className="technical-eyebrow">Category</p>
+                              <p className="mt-1 break-words text-xs font-medium text-foreground">
+                                {selectedProject.mainCategory || "—"}
+                              </p>
+                            </div>
+                            <div className="min-w-0 rounded-md border border-border bg-[#F8FAFD] px-3 py-2">
+                              <p className="technical-eyebrow">Subcategory</p>
+                              <p className="mt-1 break-words text-xs font-medium text-foreground">
+                                {selectedProject.subCategory || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                     <div className="min-w-0 space-y-2">

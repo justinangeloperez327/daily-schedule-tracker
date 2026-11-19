@@ -24,7 +24,8 @@ export async function exportDispatchSheet(
     { header: "Labours", key: "labours", width: 40 },
     { header: "Equipment", key: "equipment", width: 28 },
     { header: "Shift", key: "shift", width: 13 },
-    { header: "Scope", key: "scope", width: 25 },
+    { header: "Main Category", key: "mainCategory", width: 25 },
+    { header: "Subcategory", key: "subCategory", width: 25 },
     { header: "Daily Target", key: "dailyTarget", width: 48 },
     { header: "Camp Start", key: "camp", width: 16 },
     { header: "Start Time", key: "start", width: 16 },
@@ -32,7 +33,7 @@ export async function exportDispatchSheet(
   ];
 
   sheet.insertRow(1, ["DAILY TEAM DISPATCH SCHEDULE — " + dateLabel(date)]);
-  sheet.mergeCells("A1:L1");
+  sheet.mergeCells("A1:M1");
   sheet.getCell("A1").font = { bold: true, size: 16, color: { argb: "FF20262E" } };
   sheet.getCell("A1").alignment = { vertical: "middle" };
   sheet.getRow(1).height = 36;
@@ -57,7 +58,8 @@ export async function exportDispatchSheet(
       labours: names(entry.employeeIds),
       equipment: entry.equipmentIds.map((id) => equipments.find((e) => e.id === id)?.vehicleDetails || "Unnamed equipment").join(", "),
       shift: entry.shift,
-      scope: entry.scope,
+      mainCategory: project?.mainCategory || "",
+      subCategory: project?.subCategory || "",
       dailyTarget: entry.dailyTarget,
       camp: entry.campStart,
       start: entry.timeIn,
@@ -75,7 +77,7 @@ export async function exportDispatchSheet(
   });
 
   sheet.views = [{ state: "frozen", ySplit: 2 }];
-  sheet.autoFilter = { from: "A2", to: "L" + Math.max(2, sheet.rowCount) };
+  sheet.autoFilter = { from: "A2", to: "M" + Math.max(2, sheet.rowCount) };
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([new Uint8Array(buffer)], { type: MIME });
   const url = URL.createObjectURL(blob);
