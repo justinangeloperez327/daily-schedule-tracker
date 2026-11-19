@@ -47,6 +47,12 @@ export async function exportDispatchSheet(
 
   const names = (ids: string[]) =>
     ids.map((id) => employees.find((person) => person.id === id)?.name || "Unnamed employee").join(", ");
+  const equipmentName = (id: string) => {
+    const equipment = equipments.find((item) => item.id === id);
+    if (!equipment) return "Unnamed equipment";
+    return [equipment.fleet, equipment.description || equipment.vehicleDetails].filter(Boolean).join(" — ") ||
+      equipment.registrationNo || "Unnamed equipment";
+  };
 
   rows.forEach((entry, index) => {
     const project = projects.find((item) => item.id === entry.projectId);
@@ -56,7 +62,7 @@ export async function exportDispatchSheet(
       client: project?.clientName || "",
       foremen: names(entry.foremanIds),
       labours: names(entry.employeeIds),
-      equipment: entry.equipmentIds.map((id) => ((equipment) => equipment ? ([equipment.fleet, equipment.description || equipment.vehicleDetails].filter(Boolean).join(" — ") || "Unnamed equipment") : "Unnamed equipment")(equipments.find((e) => e.id === id))).join(", "),
+      equipment: entry.equipmentIds.map(equipmentName).join(", "),
       shift: entry.shift,
       mainCategory: project?.mainCategory || "",
       subCategory: project?.subCategory || "",

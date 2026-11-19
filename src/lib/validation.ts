@@ -8,7 +8,7 @@ const optionalText = z.string().trim().max(200).default("");
 const notesText = z.string().trim().max(5000).default("");
 const optionalIdentifier = z.string().trim().max(200).nullable().default(null).transform((value) => value || null);
 const optionalRate = z.string().trim().refine(
-  (value) => value === "" || /^(?:0|[1-9]\\d{0,9})(?:\\.\\d{1,2})?$/.test(value),
+  (value) => value === "" || /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/.test(value),
   "Enter a non-negative rate with at most two decimal places.",
 ).transform((value) => value || null);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
