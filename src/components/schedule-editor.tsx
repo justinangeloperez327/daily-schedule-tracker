@@ -22,6 +22,7 @@ import { dateKey, dateLabel } from "@/lib/schedule";
 
 type AssignmentSlot = { key: string; resourceId: string };
 type SlotField = "foremanSlots" | "labourSlots" | "equipmentSlots";
+type ResourceTab = "foremen" | "labours" | "equipments";
 type EditorSortKey = "original" | "job" | "foremen" | "labours" | "equipment" | "shift" | "scope" | "time";
 type EditorRow = Omit<DispatchEntry, "foremanIds" | "employeeIds" | "equipmentIds"> & {
   key: string;
@@ -83,6 +84,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const [removeTarget, setRemoveTarget] = React.useState<string | null>(null);
   // A single resource panel edits the selected job; job cards never own extra pickers.
   const [activeJobKey, setActiveJobKey] = React.useState<string | null>(null);
+  const [resourceTab, setResourceTab] = React.useState<ResourceTab>("foremen");
   const [sort, setSort] = React.useState<{ key: EditorSortKey; direction: TableSortDirection }>({
     key: "original", direction: "asc",
   });
@@ -142,6 +144,20 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
 
   function selectedIds(row: EditorRow, field: SlotField): string[] {
     return row[field].map((slot) => slot.resourceId).filter(Boolean);
+  }
+
+  function onResourceTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, tab: ResourceTab) {
+    const tabs: ResourceTab[] = ["foremen", "labours", "equipments"];
+    const current = tabs.indexOf(tab);
+    let next: ResourceTab | undefined;
+    if (event.key === "ArrowRight") next = tabs[(current + 1) % tabs.length];
+    if (event.key === "ArrowLeft") next = tabs[(current - 1 + tabs.length) % tabs.length];
+    if (event.key === "Home") next = tabs[0];
+    if (event.key === "End") next = tabs[tabs.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    setResourceTab(next);
+    document.getElementById("resource-tab-" + next)?.focus();
   }
 
   function sortBy(key: EditorSortKey) {
@@ -277,7 +293,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         maxSelected={assignmentLimits[field]}
         disabled={loading || saving}
         emptyHint={emptyHint}
-        compact
+        fillHeight
       />
     );
   }
@@ -388,7 +404,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
 
       {error && <p role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
       <section className="min-w-0">
-        <div className="mb-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-border bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)]">
+          <div className="min-w-0 space-y-4">
+        <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-border bg-white px-4 py-4 sm:flex-row sm:items-center sm:px-5">
           <div>
             <h2 className="text-base font-semibold text-primary">Daily job planning</h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -448,7 +466,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           </div>
         )}
 
-        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(280px,1fr)]">
           <div className="min-w-0 space-y-4">
           {!loading && displayedRows.map(({ row, index }) => {
             const customScope = !!row.scope && !scopeOptions.some((scope) => scope === row.scope);
@@ -625,11 +642,27 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             );
           })}
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-white px-4 py-3">
+            <p className="text-xs leading-5 text-muted-foreground">
+              All times use 24-hour format. Night shifts can finish the next morning.
+              Sorting changes display order only; saved order and Excel export order are unchanged.
+            </p>
+            <Button variant="outline" size="sm" disabled={loading || saving} onClick={addJob}>
+              <Plus className="size-4" /> Add Job
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2 rounded-lg border border-border bg-white px-4 py-3">
+            <Button variant="outline" asChild><Link href="/schedules">Cancel</Link></Button>
+            <Button onClick={save} disabled={loading || saving || rows.length === 0}>
+              <Save /> {saving ? "Saving..." : sheetId ? "Save Changes" : "Create Schedule"}
+            </Button>
+          </div>
+          </div>
           <aside
             aria-label="Shared resource assignments"
-            className="min-w-0 self-start rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)] lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain"
+            className="min-w-0 self-start overflow-hidden rounded-xl border border-border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)] lg:sticky lg:top-20 lg:flex lg:h-[calc(100dvh-6rem)] lg:max-h-[calc(100dvh-6rem)] lg:flex-col"
           >
-            <div className="sticky top-0 z-10 border-b border-border bg-[#F8FAFD] px-3 py-3">
+            <div className="shrink-0 border-b border-border bg-[#F8FAFD] px-3 py-3">
               <p className="technical-eyebrow">PLANNING / RESOURCES</p>
               <h3 className="mt-1 text-sm font-semibold text-primary">Resource Assignments</h3>
               {activeRow ? (
@@ -646,20 +679,69 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                 <p className="mt-2 text-xs text-muted-foreground">Add a job to assign resources.</p>
               )}
             </div>
+            <div role="tablist" aria-label="Resource assignment categories" className="grid shrink-0 grid-cols-3 gap-0.5 border-b border-border bg-white px-2 pt-2">
+              {([
+                ["foremen", "Foremen"],
+                ["labours", "Labours"],
+                ["equipments", "Equipments"],
+              ] as const).map(([tab, label]) => (
+                <button
+                  key={tab}
+                  type="button"
+                  id={"resource-tab-" + tab}
+                  role="tab"
+                  aria-selected={resourceTab === tab}
+                  aria-controls={"resource-panel-" + tab}
+                  tabIndex={resourceTab === tab ? 0 : -1}
+                  className={"min-w-0 rounded-t-md border-b-2 px-1 py-2 text-center text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 " +
+                    (resourceTab === tab
+                      ? "border-[#365F91] bg-[#EAF2FC] text-primary"
+                      : "border-transparent text-muted-foreground hover:bg-[#F5F8FC] hover:text-primary")}
+                  onClick={() => setResourceTab(tab)}
+                  onKeyDown={(event) => onResourceTabKeyDown(event, tab)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {activeRow ? (
-              <div className="space-y-3 p-2.5">
-                {renderResourceList(
-                  activeRow, activeIndex, "foremanSlots", "Foremen", foremanOptions,
-                  "No Site Foremen in the employee directory. Designation must be Site Foreman.",
-                )}
-                {renderResourceList(
-                  activeRow, activeIndex, "labourSlots", "Labourers", employeeOptions,
-                  "No employees in the directory. Add or import labourers first.",
-                )}
-                {renderResourceList(
-                  activeRow, activeIndex, "equipmentSlots", "Equipment", equipmentOptions,
-                  "No equipment in the directory. Add or import equipment first.",
-                )}
+              <div className="h-[360px] min-h-0 p-2.5 lg:h-auto lg:flex-1">
+                <div
+                  id="resource-panel-foremen"
+                  role="tabpanel"
+                  aria-labelledby="resource-tab-foremen"
+                  tabIndex={0}
+                  className={resourceTab === "foremen" ? "h-full min-h-0" : "hidden"}
+                >
+                  {renderResourceList(
+                    activeRow, activeIndex, "foremanSlots", "Foremen", foremanOptions,
+                    "No Site Foremen in the employee directory. Designation must be Site Foreman.",
+                  )}
+                </div>
+                <div
+                  id="resource-panel-labours"
+                  role="tabpanel"
+                  aria-labelledby="resource-tab-labours"
+                  tabIndex={0}
+                  className={resourceTab === "labours" ? "h-full min-h-0" : "hidden"}
+                >
+                  {renderResourceList(
+                    activeRow, activeIndex, "labourSlots", "Labourers", employeeOptions,
+                    "No employees in the directory. Add or import labourers first.",
+                  )}
+                </div>
+                <div
+                  id="resource-panel-equipments"
+                  role="tabpanel"
+                  aria-labelledby="resource-tab-equipments"
+                  tabIndex={0}
+                  className={resourceTab === "equipments" ? "h-full min-h-0" : "hidden"}
+                >
+                  {renderResourceList(
+                    activeRow, activeIndex, "equipmentSlots", "Equipment", equipmentOptions,
+                    "No equipment in the directory. Add or import equipment first.",
+                  )}
+                </div>
               </div>
             ) : (
               <p className="p-4 text-xs text-muted-foreground">No job selected.</p>
@@ -667,28 +749,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           </aside>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-white px-4 py-3">
-          <p className="text-xs leading-5 text-muted-foreground">
-            All times use 24-hour format. Night shifts can finish the next morning.
-            Sorting changes display order only; saved order and Excel export order are unchanged.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={loading || saving}
-            onClick={addJob}
-          >
-            <Plus className="size-4" /> Add Job
-          </Button>
-        </div>
       </section>
-
-      <div className="mt-6 flex justify-end gap-2">
-        <Button variant="outline" asChild><Link href="/schedules">Cancel</Link></Button>
-        <Button onClick={save} disabled={loading || saving || rows.length === 0}>
-          <Save /> {saving ? "Saving..." : sheetId ? "Save Changes" : "Create Schedule"}
-        </Button>
-      </div>
 
       <Dialog open={!!removeTarget} onOpenChange={(open) => { if (!open && !saving) setRemoveTarget(null); }}>
         <DialogContent className="sm:max-w-md">

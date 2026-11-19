@@ -20,13 +20,14 @@ type ResourceChecklistProps = {
   disabled?: boolean;
   emptyHint: string;
   compact?: boolean;
+  fillHeight?: boolean;
 };
 
 const icons = { Foremen: HardHat, Labourers: UsersRound, Equipment: Wrench };
 
 export function ResourceChecklist({
   title, jobNumber, options, selectedIds, onToggle, maxSelected,
-  disabled = false, emptyHint, compact = false,
+  disabled = false, emptyHint, compact = false, fillHeight = false,
 }: ResourceChecklistProps) {
   const [query, setQuery] = React.useState("");
   const selected = React.useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -46,7 +47,7 @@ export function ResourceChecklist({
   const inputId = React.useId();
 
   return (
-    <section className="flex min-w-0 flex-col rounded-lg border border-border bg-white">
+    <section className={(fillHeight ? "h-full min-h-0 " : "") + "flex min-w-0 flex-col rounded-lg border border-border bg-white"}>
       <div className="flex items-center justify-between gap-2 border-b border-border bg-[#F8FAFD] px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <Icon aria-hidden="true" className="size-4 shrink-0 text-[#365F91]" />
@@ -77,7 +78,7 @@ export function ResourceChecklist({
         role="group"
         aria-label={title + " for job " + jobNumber}
         tabIndex={0}
-        className={(compact ? "h-36" : "h-56") + " mx-2 mb-2 min-h-0 space-y-1 overflow-y-scroll overscroll-contain rounded-md border border-border/80 bg-white p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
+        className={(fillHeight ? "min-h-0 flex-1" : compact ? "h-36 min-h-0" : "h-56 min-h-0") + " mx-2 mb-2 space-y-1 overflow-y-scroll overscroll-contain rounded-md border border-border/80 bg-white p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
       >
         {filtered.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs leading-5 text-muted-foreground">
