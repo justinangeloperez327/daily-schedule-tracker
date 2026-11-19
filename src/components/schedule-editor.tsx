@@ -426,7 +426,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           <p className="technical-eyebrow mb-1.5">OPERATIONS / SCHEDULES / DISPATCH</p>
           <h1 className="text-[28px] font-semibold tracking-tight text-primary">{sheetId ? "Edit Schedule" : "Create Schedule"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Drag available foremen, labourers and equipment from the right panel into any job's assignment area.
+            Drag available foremen, labourers and equipment from the right panel into a job assignment area.
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
