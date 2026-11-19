@@ -652,31 +652,58 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                               {matchesDragging ? "Drop here to assign" : "Drop " + title.toLowerCase() + " here"}
                             </p>
                           ) : (
-                            <ul className="max-h-52 space-y-1.5 overflow-y-auto">
-                              {ids.map((id) => {
-                                const name = options.find((option) => option.value === id)?.label ||
-                                  employees.find((person) => person.id === id)?.name ||
-                                  equipments.find((equipment) => equipment.id === id)?.vehicleDetails ||
-                                  "Unknown resource";
-                                return (
-                                  <li key={id} className="flex min-w-0 items-start justify-between gap-1 rounded-md border border-border bg-[#F8FAFD] px-2 py-1.5">
-                                    <span className="min-w-0 break-words text-xs leading-5 text-foreground">
-                                      {name}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      title={"Unassign " + name}
-                                      aria-label={"Remove " + name + " from Job " + (index + 1)}
-                                      disabled={loading || saving}
-                                      onClick={() => unassignResource(row.key, field, id)}
-                                      className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-red-50 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
+                            <div className="min-w-0">
+                              {field !== "equipmentSlots" && (
+                                <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,1fr)_20px] gap-x-2 border-b border-border px-2 pb-2 text-[10px] font-semibold uppercase leading-4 tracking-[0.025em] text-muted-foreground">
+                                  <span className="min-w-0 break-words">Employee ID</span>
+                                  <span className="min-w-0 break-words">Name</span>
+                                  <span className="min-w-0 break-words">Position / Designation</span>
+                                  <span className="sr-only">Action</span>
+                                </div>
+                              )}
+                              <ul className="max-h-52 min-w-0 space-y-1.5 overflow-y-auto pt-1.5">
+                                {ids.map((id) => {
+                                  const employee = field !== "equipmentSlots"
+                                    ? employees.find((person) => person.id === id) : undefined;
+                                  const name = employee?.name ||
+                                    options.find((option) => option.value === id)?.label ||
+                                    equipments.find((equipment) => equipment.id === id)?.vehicleDetails ||
+                                    "Unknown resource";
+                                  return (
+                                    <li
+                                      key={id}
+                                      className={field === "equipmentSlots"
+                                        ? "flex min-w-0 items-start justify-between gap-1 rounded-md border border-border bg-[#F8FAFD] px-2 py-1.5"
+                                        : "grid min-w-0 grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)_minmax(0,1fr)_20px] items-start gap-x-2 rounded-md border border-border bg-[#F8FAFD] px-2 py-1.5"}
                                     >
-                                      <X aria-hidden="true" className="size-3.5" />
-                                    </button>
-                                  </li>
-                                );
-                              })}
-                            </ul>
+                                      {field !== "equipmentSlots" && (
+                                        <span className="min-w-0 break-words font-mono text-[11px] leading-5 text-[#365F91]">
+                                          {employee?.employeeCode || "—"}
+                                        </span>
+                                      )}
+                                      <span className="min-w-0 break-words text-xs leading-5 text-foreground">
+                                        {name}
+                                      </span>
+                                      {field !== "equipmentSlots" && (
+                                        <span className="min-w-0 break-words text-[11px] leading-5 text-muted-foreground">
+                                          {employee?.designation || "—"}
+                                        </span>
+                                      )}
+                                      <button
+                                        type="button"
+                                        title={"Unassign " + name}
+                                        aria-label={"Remove " + name + " from Job " + (index + 1)}
+                                        disabled={loading || saving}
+                                        onClick={() => unassignResource(row.key, field, id)}
+                                        className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-red-50 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
+                                      >
+                                        <X aria-hidden="true" className="size-3.5" />
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
                           )}
                           {matchesDragging && ids.length > 0 && (
                             <p className="mt-2 text-[11px] font-medium text-[#365F91]">
