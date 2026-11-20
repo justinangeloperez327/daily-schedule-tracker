@@ -12,9 +12,9 @@ export type PlanningResourceOption = ComboboxOption & {
 
 type ResourceChecklistProps = {
   title: "Foremen" | "Labourers" | "Equipment";
-  jobNumber: number;
   options: PlanningResourceOption[];
-  onAssign: (id: string) => void;
+  pickedId?: string;
+  onPick: (id: string) => void;
   onDragStart: (event: React.DragEvent<HTMLButtonElement>, id: string) => void;
   onDragEnd: () => void;
   disabled?: boolean;
@@ -23,7 +23,7 @@ type ResourceChecklistProps = {
 };
 
 export function ResourceChecklist({
-  title, jobNumber, options, onAssign, onDragStart, onDragEnd,
+  title, options, pickedId, onPick, onDragStart, onDragEnd,
   disabled = false, emptyHint, fillHeight = false,
 }: ResourceChecklistProps) {
   const [query, setQuery] = React.useState("");
@@ -47,7 +47,7 @@ export function ResourceChecklist({
       "flex min-w-0 flex-col bg-white"}>
       <div className="shrink-0 px-1 pb-2 pt-1">
         <label htmlFor={inputId} className="sr-only">
-          Search {title.toLowerCase()} for job {jobNumber}
+          Search {title.toLowerCase()}
         </label>
         <div className="relative">
           <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -64,7 +64,7 @@ export function ResourceChecklist({
       </div>
       <div
         role="group"
-        aria-label={title + " for job " + jobNumber}
+        aria-label={title + " available for assignment to jobs"}
         tabIndex={0}
         className={(fillHeight ? "min-h-0 flex-1" : "h-56 min-h-0") +
           " space-y-2 overflow-y-auto overscroll-contain bg-white p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 [scrollbar-gutter:stable]"}
@@ -87,14 +87,17 @@ export function ResourceChecklist({
                 disabled={!canDrag}
                 onDragStart={(event) => onDragStart(event, item.value)}
                 onDragEnd={onDragEnd}
-                onClick={() => onAssign(item.value)}
+                onClick={() => onPick(item.value)}
+                aria-pressed={canDrag ? pickedId === item.value : undefined}
                 aria-label={assigned
                   ? item.label + " already assigned to Job " + assignedJobs.join(", ")
-                  : "Assign " + item.label + " to selected Job " + jobNumber}
+                  : "Choose " + item.label + " to assign to a job"}
                 className={"flex w-full min-w-0 items-start rounded-lg border px-3 py-3 text-left shadow-[0_1px_3px_rgba(23,43,69,0.035)] transition-colors " +
                   (assigned ? "cursor-not-allowed border-border bg-muted/70 opacity-60" :
                     item.invalid ? "cursor-not-allowed border-amber-200 bg-amber-50 opacity-75" :
-                      "cursor-grab border-border bg-white hover:border-[#9DB5D1] hover:bg-[#EAF2FC] active:cursor-grabbing")}
+                      pickedId === item.value
+                        ? "cursor-grab border-[#365F91] bg-[#EAF2FC] ring-1 ring-[#365F91]/20 active:cursor-grabbing"
+                        : "cursor-grab border-border bg-white hover:border-[#9DB5D1] hover:bg-[#EAF2FC] active:cursor-grabbing")}
               >
                 <span className="min-w-0 flex-1">
                   <span className="block break-words text-xs font-semibold leading-5 text-primary">

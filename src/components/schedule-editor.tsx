@@ -84,8 +84,9 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   const [saving, setSaving] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
   const [removeTarget, setRemoveTarget] = React.useState<string | null>(null);
-  // A single resource panel edits the selected job; job cards never own extra pickers.
-  const [activeJobKey, setActiveJobKey] = React.useState<string | null>(null);
+  // Optional click/keyboard alternative to drag-and-drop: pick a resource, then
+  // choose an "Assign here" action on whichever job should receive it.
+  const [pendingResource, setPendingResource] = React.useState<ResourceDrag | null>(null);
   const [resourceTab, setResourceTab] = React.useState<ResourceTab>("foremen");
   const [dragging, setDragging] = React.useState<ResourceDrag | null>(null);
   const [dropTarget, setDropTarget] = React.useState<{ rowKey: string; field: SlotField } | null>(null);
@@ -169,7 +170,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         ? { ...row, [field]: [...row[field].filter((slot) => slot.resourceId), assignmentSlot(resourceId)] }
         : row
     ));
-    setActiveJobKey(rowKey);
+    setPendingResource(null);
     setError("");
   }
 
@@ -195,6 +196,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     event.dataTransfer.effectAllowed = "copy";
     event.dataTransfer.setData(RESOURCE_DRAG_TYPE, JSON.stringify({ field, resourceId }));
     setDragging({ field, resourceId });
+    setPendingResource(null);
     setDropTarget(null);
   }
 
@@ -254,7 +256,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
         equipmentSlots: [],
       }];
     }));
-    setActiveJobKey(cloneKey);
     setError("");
   }
 
@@ -262,15 +263,12 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     if (loading || saving) return;
     const next = newRow();
     setRows((current) => [...current, next]);
-    setActiveJobKey(next.key);
     setError("");
   }
 
   // Job order is the original schedule order. Drag-and-drop assigns resources,
   // never moves or reorders the jobs.
   const displayedRows = rows.map((row, index) => ({ row, index }));
-  const activeRow = rows.find((row) => row.key === activeJobKey) ?? rows[0] ?? null;
-  const activeIndex = activeRow ? rows.findIndex((row) => row.key === activeRow.key) : -1;
 
   const projectOptions: ComboboxOption[] = projects.map((project) => {
     const projectName = (project.name || "").trim();
@@ -311,14 +309,12 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
   }));
 
   function renderResourceList(
-    row: EditorRow,
-    index: number,
     field: SlotField,
     title: "Foremen" | "Labourers" | "Equipment",
     options: ComboboxOption[],
     emptyHint: string,
   ) {
-    const chosen = selectedIds(row, field);
+    const chosen = [...new Set(rows.flatMap((row) => selectedIds(row, field)))];
     const known = new Set(options.map((item) => item.value));
     const enriched: PlanningResourceOption[] = options.map((option) => ({
       ...option,
@@ -344,9 +340,14 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
     return (
       <ResourceChecklist
         title={title}
-        jobNumber={index + 1}
         options={enriched}
-        onAssign={(resourceId) => assignResource(row.key, field, resourceId)}
+        pickedId={pendingResource?.field === field ? pendingResource.resourceId : undefined}
+        onPick={(resourceId) => {
+          setPendingResource((current) =>
+            current?.field === field && current.resourceId === resourceId
+              ? null : { field, resourceId }
+          );
+        }}
         onDragStart={(event, resourceId) => startResourceDrag(event, field, resourceId)}
         onDragEnd={stopResourceDrag}
         disabled={loading || saving}
@@ -482,27 +483,16 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
           <div className="min-w-0 space-y-4">
           {!loading && displayedRows.map(({ row, index }) => {
             const selectedProject = projects.find((project) => project.id === row.projectId);
-            const selected = activeRow?.key === row.key;
             return (
               <section
                 key={row.key}
                 aria-labelledby={"dispatch-job-" + row.key}
-                className={"min-w-0 rounded-xl border bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)] transition-colors " +
-                  (selected ? "border-[#365F91] ring-1 ring-[#365F91]/25" : "border-border")}
+                className="min-w-0 rounded-xl border border-[#365F91] bg-white shadow-[0_2px_16px_rgba(16,24,40,0.025)]"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-[#F8FAFD] px-4 py-3 sm:px-5">
                   <div className="min-w-0 flex-1">
-                    <h3 id={"dispatch-job-" + row.key}>
-                      <button
-                        type="button"
-                        aria-label={"Make Job " + (index + 1) + " active for resource assignment"}
-                        aria-pressed={selected}
-                        title={"Select Job " + (index + 1) + " for resource card clicks"}
-                        onClick={() => setActiveJobKey(row.key)}
-                        className="technical-eyebrow rounded-sm text-left transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-                      >
-                        JOB {String(index + 1).padStart(2, "0")} / DISPATCH
-                      </button>
+                    <h3 id={"dispatch-job-" + row.key} className="technical-eyebrow">
+                      JOB {String(index + 1).padStart(2, "0")} / DISPATCH
                     </h3>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -615,6 +605,7 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                     ] as const).map(([title, field, options]) => {
                       const ids = selectedIds(row, field);
                       const matchesDragging = dragging?.field === field;
+                      const matchesPending = pendingResource?.field === field;
                       const isOver = matchesDragging &&
                         dropTarget?.rowKey === row.key && dropTarget?.field === field;
                       return (
@@ -710,6 +701,22 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                               </ul>
                             </div>
                           )}
+                          {matchesPending && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 h-8 w-full border-[#365F91] text-[#365F91] hover:bg-[#EAF2FC]"
+                              disabled={saving || loading}
+                              onClick={() => {
+                                if (pendingResource?.field === field) {
+                                  assignResource(row.key, field, pendingResource.resourceId);
+                                }
+                              }}
+                            >
+                              Assign here
+                            </Button>
+                          )}
                           {matchesDragging && ids.length > 0 && (
                             <p className="mt-2 text-[11px] font-medium text-[#365F91]">
                               Drop to add another {title === "Equipment" ? "equipment item" : "person"}
@@ -772,48 +779,44 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
                 </button>
               ))}
             </div>
-            {activeRow ? (
-              <div className="h-[360px] min-h-0 p-2.5 lg:h-auto lg:flex-1">
-                <div
-                  id="resource-panel-foremen"
-                  role="tabpanel"
-                  aria-labelledby="resource-tab-foremen"
-                  tabIndex={0}
-                  className={resourceTab === "foremen" ? "h-full min-h-0" : "hidden"}
-                >
-                  {renderResourceList(
-                    activeRow, activeIndex, "foremanSlots", "Foremen", foremanOptions,
-                    "No Site Foremen in the employee directory. Designation must be Site Foreman.",
-                  )}
-                </div>
-                <div
-                  id="resource-panel-labours"
-                  role="tabpanel"
-                  aria-labelledby="resource-tab-labours"
-                  tabIndex={0}
-                  className={resourceTab === "labours" ? "h-full min-h-0" : "hidden"}
-                >
-                  {renderResourceList(
-                    activeRow, activeIndex, "labourSlots", "Labourers", employeeOptions,
-                    "No employees in the directory. Add or import labourers first.",
-                  )}
-                </div>
-                <div
-                  id="resource-panel-equipments"
-                  role="tabpanel"
-                  aria-labelledby="resource-tab-equipments"
-                  tabIndex={0}
-                  className={resourceTab === "equipments" ? "h-full min-h-0" : "hidden"}
-                >
-                  {renderResourceList(
-                    activeRow, activeIndex, "equipmentSlots", "Equipment", equipmentOptions,
-                    "No equipment in the directory. Add or import equipment first.",
-                  )}
-                </div>
+            <div className="h-[360px] min-h-0 p-2.5 lg:h-auto lg:flex-1">
+              <div
+                id="resource-panel-foremen"
+                role="tabpanel"
+                aria-labelledby="resource-tab-foremen"
+                tabIndex={0}
+                className={resourceTab === "foremen" ? "h-full min-h-0" : "hidden"}
+              >
+                {renderResourceList(
+                  "foremanSlots", "Foremen", foremanOptions,
+                  "No Site Foremen in the employee directory. Designation must be Site Foreman.",
+                )}
               </div>
-            ) : (
-              <p className="p-4 text-xs text-muted-foreground">No job selected.</p>
-            )}
+              <div
+                id="resource-panel-labours"
+                role="tabpanel"
+                aria-labelledby="resource-tab-labours"
+                tabIndex={0}
+                className={resourceTab === "labours" ? "h-full min-h-0" : "hidden"}
+              >
+                {renderResourceList(
+                  "labourSlots", "Labourers", employeeOptions,
+                  "No employees in the directory. Add or import labourers first.",
+                )}
+              </div>
+              <div
+                id="resource-panel-equipments"
+                role="tabpanel"
+                aria-labelledby="resource-tab-equipments"
+                tabIndex={0}
+                className={resourceTab === "equipments" ? "h-full min-h-0" : "hidden"}
+              >
+                {renderResourceList(
+                  "equipmentSlots", "Equipment", equipmentOptions,
+                  "No equipment in the directory. Add or import equipment first.",
+                )}
+              </div>
+            </div>
           </aside>
         </div>
 
@@ -832,7 +835,6 @@ export function ScheduleEditor({ sheetId }: { sheetId?: string }) {
             <Button variant="outline" type="button" onClick={() => setRemoveTarget(null)}>Cancel</Button>
             <Button variant="destructive" type="button" onClick={() => {
               setRows((current) => current.filter((row) => row.key !== removeTarget));
-              setActiveJobKey((current) => current === removeTarget ? null : current);
               setRemoveTarget(null);
               setError("");
             }}>
