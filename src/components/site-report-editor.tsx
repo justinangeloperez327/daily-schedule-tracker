@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Save, Trash2, Truck, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Plus, Save, Trash2, Truck, Users } from "lucide-react";
 import { SearchCombobox, type ComboboxOption } from "@/components/ui/search-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import type { Employee, Equipment, Project } from "@/lib/catalog";
 import { apiRequest } from "@/lib/http";
 import { dateKey, dateLabel } from "@/lib/schedule";
 import {
-  DEFAULT_EQUIPMENT_ROWS, DEFAULT_LABOUR_ROWS, OT_HOUR_OPTIONS, hoursBetween, type SiteReport,
+  DEFAULT_EQUIPMENT_ROWS, DEFAULT_LABOUR_ROWS, OT_HOUR_OPTIONS, hoursBetween, type LabourUsage, type SiteReport,
 } from "@/lib/site-report";
 
 type LabourRow = { key: string; employeeId: string; timeIn: string; timeOut: string; otHours: number };
@@ -56,6 +56,18 @@ export function SiteReportEditor({ reportId }: { reportId?: string }) {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
   const [meta, setMeta] = React.useState<{ createdBy: string | null; updatedAt: string } | null>(null);
+  const [usage, setUsage] = React.useState<LabourUsage[]>([]);
+
+  // Load employees already reported elsewhere on this date (warn only, never block).
+  React.useEffect(() => {
+    if (!date) return;
+    let active = true;
+    const query = "?date=" + encodeURIComponent(date) + (reportId ? "&exclude=" + encodeURIComponent(reportId) : "");
+    apiRequest<LabourUsage[]>("/api/site-reports/labour-usage" + query)
+      .then((rows) => { if (active) setUsage(rows); })
+      .catch(() => { if (active) setUsage([]); });
+    return () => { active = false; };
+  }, [date, reportId]);
 
   React.useEffect(() => {
     let active = true;
@@ -89,6 +101,16 @@ export function SiteReportEditor({ reportId }: { reportId?: string }) {
   const filledLabours = labours.filter((row) => row.employeeId);
   const filledVehicles = vehicles.filter((row) => row.equipmentId);
   const totalOt = filledLabours.reduce((sum, row) => sum + row.otHours, 0);
+  const usageByEmployee = React.useMemo(() => {
+    const map = new Map<string, LabourUsage[]>();
+    for (const entry of usage) map.set(entry.employeeId, [...(map.get(entry.employeeId) ?? []), entry]);
+    return map;
+  }, [usage]);
+  const doubleEntered = filledLabours.filter((row) => usageByEmployee.has(row.employeeId));
+  function usageNote(employeeId: string) {
+    return (usageByEmployee.get(employeeId) ?? [])
+      .map((entry) => entry.jobNo + " (" + entry.timeIn + "–" + entry.timeOut + ")").join(", ");
+  }
 
   const projectOptions: ComboboxOption[] = React.useMemo(() => projects.map((entry) => {
     const projectName = (entry.name || "").trim();
@@ -263,6 +285,13 @@ export function SiteReportEditor({ reportId }: { reportId?: string }) {
                 </Button>
               </div>
             </div>
+            {doubleEntered.length > 0 && (
+              <p role="status" className="mx-4 mt-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 sm:mx-6">
+                <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                {doubleEntered.length === 1 ? "1 employee is" : doubleEntered.length + " employees are"} already in another
+                report on this date. Check their hours aren&apos;t counted twice. You can still submit.
+              </p>
+            )}
             <div className="relative overflow-x-auto">
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="bg-[#f0f5fa]">
@@ -284,6 +313,12 @@ export function SiteReportEditor({ reportId }: { reportId?: string }) {
                         <SearchCombobox label={"Labour " + (index + 1) + " employee"} value={row.employeeId}
                           onValueChange={(value) => patchLabour(row.key, { employeeId: value })}
                           options={employeeOptions(row.key)} placeholder="Select employee" disabled={disabled} />
+                        {usageByEmployee.has(row.employeeId) && (
+                          <p className="mt-1 flex items-start gap-1 text-xs text-amber-700">
+                            <AlertTriangle aria-hidden="true" className="mt-0.5 size-3 shrink-0" />
+                            Also reported on this date: {usageNote(row.employeeId)}
+                          </p>
+                        )}
                       </td>
                       <td className="px-2 py-2">
                         <Input type="time" aria-label={"Labour " + (index + 1) + " time in"} className="h-10" value={row.timeIn}

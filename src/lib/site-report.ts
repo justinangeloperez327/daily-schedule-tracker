@@ -48,3 +48,12 @@ export function hoursBetween(timeIn: string, timeOut: string): number {
   if (minutes < 0) minutes += 24 * 60;
   return Math.round((minutes / 60) * 100) / 100;
 }
+
+// Where an employee already appears in another report on the same date.
+export type LabourUsage = {
+  employeeId: string;
+  reportId: string;
+  jobNo: string;
+  timeIn: string;
+  timeOut: string;
+};
