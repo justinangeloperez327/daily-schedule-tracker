@@ -74,7 +74,7 @@ Every page and API route requires sign-in.
 
 ## Site Daily Reports
 
-**Site Reports** (`/site-reports`) is separate from the daily schedule for now. One report per job order per date:
+**Site Reports** (`/site-reports`) is separate from the daily schedule for now. A job order can have several reports on the same date (for example, separate crews):
 
 - **Job order no.** — searchable project picker (job order no., project, client, SO no.)
 - **Date**
@@ -83,9 +83,9 @@ Every page and API route requires sign-in.
 - **Labour** — 5 rows shown by default, add as many as needed (minimum 1 employee). Each row: employee, time in, time out, OT hours (0–12 in half-hour steps). Worked hours are shown per row; overnight shifts are allowed. An employee can appear once per report; Inactive/Terminated employees can't be picked.
 - **Equipment** — optional; select by vehicle no. (the equipment Fleet number) with its description shown.
 
-Submitting a second report for the same job order and date is rejected; edit the existing one instead. Employees, equipment and projects used in a report can't be deleted until the report is changed or removed.
+Employees, equipment and projects used in a report can't be deleted until the report is changed or removed.
 
-Migration `20261124053654_auth_and_site_daily_reports` adds `User`, `Session`, `SiteDailyReport`, `SiteReportLabour` and `SiteReportEquipment`. It only creates tables; existing data is untouched.
+Migration `20261124053654_auth_and_site_daily_reports` adds `User`, `Session`, `SiteDailyReport`, `SiteReportLabour` and `SiteReportEquipment`. It only creates tables; existing data is untouched. Migration `20261124061810_allow_multiple_site_reports_per_day` then removes the one-report-per-job-per-date rule.
 
 **Migration note:** The earlier prototype stored schedules only in the browser's `localStorage`. Those entries are **not automatically imported** into PostgreSQL. The new version leaves the old browser data untouched; existing entries must be transferred separately if needed.
 

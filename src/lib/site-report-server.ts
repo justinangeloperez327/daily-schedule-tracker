@@ -71,5 +71,3 @@ export function equipmentRows(input: ReportInput) {
   return input.equipmentIds.map((equipmentId, index) => ({ equipmentId, sortOrder: index }));
 }
 
-export const DUPLICATE_REPORT_MESSAGE =
-  "A site daily report already exists for this job order on this date. Open and edit that report instead.";

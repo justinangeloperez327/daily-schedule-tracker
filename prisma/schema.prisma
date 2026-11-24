@@ -181,7 +181,7 @@ model Session {
 // Site daily report (kept separate from the daily schedule for now)
 // ---------------------------------------------------------------------------
 
-// One report per project (job order) per site-local date.
+// A job order can have several reports on the same date (e.g. separate crews).
 model SiteDailyReport {
   id                  String                @id @default(cuid())
   projectId           String
@@ -196,7 +196,7 @@ model SiteDailyReport {
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 
-  @@unique([projectId, date])
+  @@index([projectId, date])
   @@index([date])
 }
 

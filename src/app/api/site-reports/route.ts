@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { apiError, parseJson } from "@/lib/api-response";
 import { requireUser } from "@/lib/auth";
 import { siteReportInput } from "@/lib/validation";
 import {
-  DUPLICATE_REPORT_MESSAGE, equipmentRows, labourRows, siteReportDto, siteReportInclude,
+  equipmentRows, labourRows, siteReportDto, siteReportInclude,
   siteReportSummaryDto, siteReportSummaryInclude,
 } from "@/lib/site-report-server";
 
@@ -40,10 +39,5 @@ export async function POST(request: Request) {
       include: siteReportInclude,
     });
     return NextResponse.json(siteReportDto(report), { status: 201 });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return NextResponse.json({ error: DUPLICATE_REPORT_MESSAGE }, { status: 409 });
-    }
-    return apiError(error);
-  }
+  } catch (error) { return apiError(error); }
 }
