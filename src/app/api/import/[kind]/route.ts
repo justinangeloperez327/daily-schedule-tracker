@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 import { apiError, parseJson } from "@/lib/api-response";
 import { employeeImportInput, equipmentImportInput, projectImportInput } from "@/lib/validation";
 import type { CatalogKind } from "@/lib/catalog";
@@ -17,6 +18,7 @@ const batchSchema = z.object({
 
 export async function POST(request: Request, context: Context) {
   try {
+    await requireUser();
     const { kind } = await context.params;
     if (kind !== "projects" && kind !== "employees" && kind !== "equipments") {
       return NextResponse.json({ error: "Invalid import category." }, { status: 404 });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@/generated/prisma/client";
 import { DatabaseConfigurationError } from "@/lib/prisma";
 import { ZodError } from "zod";
+import { ForbiddenError, UnauthorizedError } from "@/lib/auth";
 
 function databaseError(message: string, status = 503) {
   return NextResponse.json({ error: message }, { status });
@@ -13,6 +14,13 @@ function errorCode(error: unknown): string {
 }
 
 export function apiError(error: unknown) {
+  if (error instanceof UnauthorizedError) {
+    return NextResponse.json({ error: error.message }, { status: 401 });
+  }
+  if (error instanceof ForbiddenError) {
+    return NextResponse.json({ error: error.message }, { status: 403 });
+  }
+
   if (error instanceof ZodError) {
     return NextResponse.json(
       { error: error.issues[0]?.message || "Invalid request." },
@@ -30,7 +38,7 @@ export function apiError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2003") {
       return NextResponse.json(
-        { error: "This record is in use by a schedule. Remove those assignments before deleting it." },
+        { error: "This record is in use by a schedule or site daily report. Remove those assignments before deleting it." },
         { status: 409 }
       );
     }

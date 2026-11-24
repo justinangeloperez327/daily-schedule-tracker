@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 import { apiError, parseJson } from "@/lib/api-response";
 import { projectInput } from "@/lib/validation";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    await requireUser();
     const projects = await getPrisma().project.findMany({
       orderBy: [{ name: "asc" }, { createdAt: "asc" }],
     });
@@ -19,6 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requireUser();
     const data = projectInput.parse(await parseJson(request));
     const project = await getPrisma().project.create({ data });
     return NextResponse.json(project, { status: 201 });

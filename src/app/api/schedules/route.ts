@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 import { apiError, parseJson } from "@/lib/api-response";
 import { dailyScheduleInput } from "@/lib/validation";
 import { scheduleDto, scheduleInclude, scheduleSummaryInclude, scheduleSummaryDto } from "@/lib/schedule-server";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    await requireUser();
     const schedules = await getPrisma().schedule.findMany({
       include: scheduleSummaryInclude,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -19,6 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await requireUser();
     const input = dailyScheduleInput.parse(await parseJson(request));
     const schedule = await getPrisma().schedule.create({
       data: {
