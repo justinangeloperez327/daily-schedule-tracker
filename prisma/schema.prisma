@@ -9,22 +9,23 @@ datasource db {
 
 // A Project is the master list of selectable jobs; it can be assigned to many schedules.
 model Project {
-  id              String        @id @default(cuid())
-  soNo            String        @default("")
+  id              String            @id @default(cuid())
+  soNo            String            @default("")
   jobNo           String?
-  rev             String        @default("")
+  rev             String            @default("")
   clientName      String
-  mainCategory    String        @default("")
-  subCategory     String        @default("")
+  mainCategory    String            @default("")
+  subCategory     String            @default("")
   name            String
-  descriptions    String        @default("") @db.Text
-  contractValue   String        @default("")
-  paymentTerms    String        @default("") @db.Text
-  status          String        @default("")
-  projectInCharge String        @default("")
+  descriptions    String            @default("") @db.Text
+  contractValue   String            @default("")
+  paymentTerms    String            @default("") @db.Text
+  status          String            @default("")
+  projectInCharge String            @default("")
   scheduleJobs    ScheduleJob[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  siteReports     SiteDailyReport[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([jobNo, rev])
   @@index([name])
@@ -32,19 +33,20 @@ model Project {
 
 // The same employee can be assigned to multiple jobs, as foreman and/or labour.
 model Employee {
-  id                 String       @id @default(cuid())
+  id                 String             @id @default(cuid())
   employeeCode       String?
   name               String
   designation        String
-  location           String       @default("")
-  category           String       @default("")
-  joiningDate        String       @default("")
-  status             String       @default("Not set")
-  remarks            String       @default("") @db.Text
+  location           String             @default("")
+  category           String             @default("")
+  joiningDate        String             @default("")
+  status             String             @default("Not set")
+  remarks            String             @default("") @db.Text
   labourAssignments  JobLabour[]
   foremanAssignments JobForeman[]
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  siteReportLabours  SiteReportLabour[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   @@index([name])
   @@index([employeeCode])
@@ -52,21 +54,22 @@ model Employee {
 }
 
 model Equipment {
-  id             String         @id @default(cuid())
-  fleet          String         @default("")
-  description    String         @default("") @db.Text
-  ratePerDay     Decimal?       @db.Decimal(12, 2)
-  ratePerHour    Decimal?       @db.Decimal(12, 2)
+  id             String                @id @default(cuid())
+  fleet          String                @default("")
+  description    String                @default("") @db.Text
+  ratePerDay     Decimal?              @db.Decimal(12, 2)
+  ratePerHour    Decimal?              @db.Decimal(12, 2)
   // Preserve the previous import columns and historical values for compatibility.
   registrationNo String?
-  vehicleType    String         @default("")
-  vehicleDetails String         @default("")
-  limit          String         @default("")
-  modelYear      String         @default("")
-  remarks        String         @default("") @db.Text
+  vehicleType    String                @default("")
+  vehicleDetails String                @default("")
+  limit          String                @default("")
+  modelYear      String                @default("")
+  remarks        String                @default("") @db.Text
   jobAssignments JobEquipment[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  siteReportUses SiteReportEquipment[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
   @@index([fleet])
   @@index([vehicleDetails])
@@ -76,7 +79,7 @@ model Equipment {
 // One schedule contains many jobs/dispatch rows.
 model Schedule {
   id        String        @id @default(cuid())
-  date      String        // YYYY-MM-DD site-local calendar date
+  date      String // YYYY-MM-DD site-local calendar date
   jobs      ScheduleJob[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -87,25 +90,25 @@ model Schedule {
 // Every job belongs to exactly one schedule and references one Project.
 // The job's foremen, labourers and equipment are many-to-many assignments.
 model ScheduleJob {
-  id           String         @id @default(cuid())
-  scheduleId   String
-  schedule     Schedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  projectId    String
-  project      Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  date         String         // Retained from legacy job records for backward compatibility
-  jobNo        String         // Retained from legacy job records for backward compatibility
-  sortOrder    Int            @default(0)
-  shift        String         @default("Day")
-  campStart    String         @default("")
-  timeIn       String
-  timeOut      String
-  scope        String         @db.Text
-  dailyTarget  String         @default("") @db.Text
-  foremen      JobForeman[]
-  labours      JobLabour[]
-  equipments   JobEquipment[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  scheduleId  String
+  schedule    Schedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  date        String // Retained from legacy job records for backward compatibility
+  jobNo       String // Retained from legacy job records for backward compatibility
+  sortOrder   Int            @default(0)
+  shift       String         @default("Day")
+  campStart   String         @default("")
+  timeIn      String
+  timeOut     String
+  scope       String         @db.Text
+  dailyTarget String         @default("") @db.Text
+  foremen     JobForeman[]
+  labours     JobLabour[]
+  equipments  JobEquipment[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([date, timeIn])
   @@index([scheduleId, sortOrder])
@@ -139,5 +142,87 @@ model JobEquipment {
   equipment   Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
 
   @@id([jobId, equipmentId])
+  @@index([equipmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+// Application login. Passwords are stored as scrypt hashes, never in plain text.
+model User {
+  id           String            @id @default(cuid())
+  username     String            @unique
+  name         String
+  passwordHash String
+  role         String            @default("user") // "admin" | "user"
+  active       Boolean           @default(true)
+  sessions     Session[]
+  siteReports  SiteDailyReport[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+// Server-side session. The browser cookie holds a random token; only its
+// SHA-256 hash is stored, so a database leak does not expose live sessions.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Site daily report (kept separate from the daily schedule for now)
+// ---------------------------------------------------------------------------
+
+// One report per project (job order) per site-local date.
+model SiteDailyReport {
+  id                  String                @id @default(cuid())
+  projectId           String
+  project             Project               @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  date                String // YYYY-MM-DD site-local calendar date
+  activityDescription String                @default("") @db.Text
+  remarks             String                @default("") @db.Text
+  createdById         String?
+  createdBy           User?                 @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  labours             SiteReportLabour[]
+  equipments          SiteReportEquipment[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@unique([projectId, date])
+  @@index([date])
+}
+
+model SiteReportLabour {
+  id         String          @id @default(cuid())
+  reportId   String
+  report     SiteDailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee        @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  sortOrder  Int             @default(0)
+  timeIn     String // HH:mm
+  timeOut    String // HH:mm
+  otHours    Decimal         @default(0) @db.Decimal(4, 1)
+
+  @@unique([reportId, employeeId])
+  @@index([employeeId])
+}
+
+model SiteReportEquipment {
+  id          String          @id @default(cuid())
+  reportId    String
+  report      SiteDailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  equipmentId String
+  equipment   Equipment       @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  sortOrder   Int             @default(0)
+
+  @@unique([reportId, equipmentId])
   @@index([equipmentId])
 }

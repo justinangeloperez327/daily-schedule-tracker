@@ -122,3 +122,64 @@ export const dailyScheduleInput = z.object({
     ctx.addIssue({ code: "custom", path: ["jobs"], message: "Duplicate job row identifiers." });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Authentication and users
+// ---------------------------------------------------------------------------
+
+const username = z.string().trim().toLowerCase()
+  .min(3, "Username must be at least 3 characters.")
+  .max(60)
+  .regex(/^[a-z0-9._-]+$/, "Username may contain letters, numbers, dots, dashes and underscores.");
+const password = z.string().min(8, "Password must be at least 8 characters.").max(200);
+
+export const loginInput = z.object({
+  username: z.string().trim().toLowerCase().min(1, "Enter your username.").max(60),
+  password: z.string().min(1, "Enter your password.").max(200),
+}).strict();
+
+export const setupInput = z.object({
+  name: requiredText,
+  username,
+  password,
+}).strict();
+
+export const userCreateInput = setupInput.extend({
+  role: z.enum(["admin", "user"]).default("user"),
+}).strict();
+
+export const userUpdateInput = z.object({
+  name: requiredText.optional(),
+  role: z.enum(["admin", "user"]).optional(),
+  active: z.boolean().optional(),
+  password: password.optional(),
+}).strict();
+
+// ---------------------------------------------------------------------------
+// Site daily report
+// ---------------------------------------------------------------------------
+
+export const siteReportLabourInput = z.object({
+  employeeId: z.string().min(1).max(200),
+  timeIn: time,
+  timeOut: time,
+  otHours: z.number().min(0, "OT hours cannot be negative.").max(24, "OT hours cannot exceed 24.")
+    .refine((value) => Number.isInteger(value * 2), "OT hours must be in half-hour steps."),
+}).strict();
+
+export const siteReportInput = z.object({
+  projectId: z.string().min(1, "Select a project by job order number.").max(200),
+  date,
+  activityDescription: z.string().trim().max(5000).default(""),
+  remarks: notesText,
+  labours: z.array(siteReportLabourInput).min(1, "Add at least one labour.").max(200),
+  equipmentIds: z.array(z.string().min(1).max(200)).max(100).default([]),
+}).strict().superRefine((report, ctx) => {
+  const employeeIds = report.labours.map((labour) => labour.employeeId);
+  if (new Set(employeeIds).size !== employeeIds.length) {
+    ctx.addIssue({ code: "custom", path: ["labours"], message: "Each employee can only appear once in the labour list." });
+  }
+  if (new Set(report.equipmentIds).size !== report.equipmentIds.length) {
+    ctx.addIssue({ code: "custom", path: ["equipmentIds"], message: "Each vehicle can only appear once in the equipment list." });
+  }
+});

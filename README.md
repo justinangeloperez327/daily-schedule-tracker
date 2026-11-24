@@ -63,9 +63,29 @@ Select a schedule date and click **Export to Excel**. The browser downloads a fo
 - **Automatic Vercel Git deployments are disabled** by `vercel.json`. Deploy intentionally using `vercel --prod`.
 - GitHub Actions checks types, linting and build without connecting to a database.
 
-## Current limitations
+## Authentication
 
-This is an **unauthenticated prototype**. Do **not** expose the app publicly or use live personnel/project data until access control and authentication are added. The API currently accepts writes from any caller who can reach it.
+Every page and API route requires sign-in.
+
+- **First run:** open the app and you are sent to `/login`. While the `User` table is empty, the page shows **Create administrator**. That first account is an admin. Setup turns itself off once any user exists.
+- **Users page** (`/users`, admins only): add users, change role (Admin / User), reset passwords, deactivate or delete accounts. Resetting a password or deactivating a user signs them out everywhere.
+- Passwords are stored as scrypt hashes. Sessions are server-side (`Session` table); the browser holds only a random token in an httpOnly cookie, and the database stores its SHA-256 hash. Sessions last 14 days.
+- `src/proxy.ts` redirects signed-out visitors to `/login` (cookie check only). Each API handler re-validates the session against the database with `requireUser()` / `requireAdmin()`.
+
+## Site Daily Reports
+
+**Site Reports** (`/site-reports`) is separate from the daily schedule for now. One report per job order per date:
+
+- **Job order no.** — searchable project picker (job order no., project, client, SO no.)
+- **Date**
+- **Activity description** — optional free text (may later be replaced by the per-project tracker)
+- **Remarks** — optional
+- **Labour** — 5 rows shown by default, add as many as needed (minimum 1 employee). Each row: employee, time in, time out, OT hours (0–12 in half-hour steps). Worked hours are shown per row; overnight shifts are allowed. An employee can appear once per report; Inactive/Terminated employees can't be picked.
+- **Equipment** — optional; select by vehicle no. (the equipment Fleet number) with its description shown.
+
+Submitting a second report for the same job order and date is rejected; edit the existing one instead. Employees, equipment and projects used in a report can't be deleted until the report is changed or removed.
+
+Migration `20261124053654_auth_and_site_daily_reports` adds `User`, `Session`, `SiteDailyReport`, `SiteReportLabour` and `SiteReportEquipment`. It only creates tables; existing data is untouched.
 
 **Migration note:** The earlier prototype stored schedules only in the browser's `localStorage`. Those entries are **not automatically imported** into PostgreSQL. The new version leaves the old browser data untouched; existing entries must be transferred separately if needed.
 
@@ -92,7 +112,7 @@ Each catalog page now has **Import Excel** and a **Download Excel template** opt
 
 Apply all database schema changes, including the migration that removes identifier uniqueness, after pulling new code: `npm run db:deploy`.
 
-**Security:** This is still an unauthenticated prototype. Do not publish it or import real employee/client information without adding authentication and access controls.
+**Security:** Imports require a signed-in user. Review who has accounts before importing real employee or client information.
 
 ## Deployment prerequisites (Vercel)
 

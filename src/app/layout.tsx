@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
+import { getCurrentUser } from "@/lib/auth";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"], display: "swap" });
@@ -11,11 +12,14 @@ export const metadata: Metadata = {
   description: "Manage daily site schedules, projects, employees, and equipment.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // A missing/unreachable database must not crash every page; the pages
+  // themselves show the database error from the API.
+  const user = await getCurrentUser().catch(() => null);
   return (
     <html lang="en">
       <body className={geist.variable + " " + geistMono.variable + " min-h-screen min-w-0 overflow-x-clip bg-background"}>
-        <SiteHeader />
+        <SiteHeader user={user} />
         {children}
       </body>
     </html>

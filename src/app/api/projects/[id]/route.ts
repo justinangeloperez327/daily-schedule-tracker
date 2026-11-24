@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 import { apiError, parseJson } from "@/lib/api-response";
 import { projectInput } from "@/lib/validation";
 
@@ -8,6 +9,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, context: Context) {
   try {
+    await requireUser();
     const { id } = await context.params;
     const data = projectInput.parse(await parseJson(request));
     const project = await getPrisma().project.update({ where: { id }, data });
@@ -17,6 +19,7 @@ export async function PUT(request: Request, context: Context) {
 
 export async function DELETE(_request: Request, context: Context) {
   try {
+    await requireUser();
     const { id } = await context.params;
     await getPrisma().project.delete({ where: { id } });
     return NextResponse.json({ success: true });
