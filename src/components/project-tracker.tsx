@@ -124,7 +124,20 @@ export function ProjectTracker({ initialProjectId = "" }: { initialProjectId?: s
   const approved = items.filter((item) => item.wirStatus === "Approved").length;
   const completed = items.filter((item) => trackerProgress(item) === 5).length;
 
+  function hasUnsavedChanges() {
+    return items.some((item) =>
+      JSON.stringify(drafts[item.id] ?? draftFromItem(item)) !== JSON.stringify(draftFromItem(item))
+    );
+  }
+
+  function confirmNavigation() {
+    return !hasUnsavedChanges() || window.confirm(
+      "You have unsaved tracker changes. Leave this project without saving them?"
+    );
+  }
+
   function selectType(nextType: TrackerType) {
+    if (nextType === selectedType || !confirmNavigation()) return;
     setSelectedType(nextType);
     setProjectId("");
     setItems([]);
@@ -135,6 +148,7 @@ export function ProjectTracker({ initialProjectId = "" }: { initialProjectId?: s
   }
 
   function selectProject(id: string) {
+    if (id === projectId || !confirmNavigation()) return;
     setProjectId(id);
     setItems([]);
     setDrafts({});
