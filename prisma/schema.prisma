@@ -24,6 +24,7 @@ model Project {
   projectInCharge String            @default("")
   scheduleJobs    ScheduleJob[]
   siteReports     SiteDailyReport[]
+  trackerItems    ProjectTrackerItem[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -225,4 +226,32 @@ model SiteReportEquipment {
 
   @@unique([reportId, equipmentId])
   @@index([equipmentId])
+}
+
+
+// Per-project subcategory progress tracking. Items persist independently of
+// daily schedule dispatches and are never regenerated on page load.
+model ProjectTrackerItem {
+  id                       String   @id @default(cuid())
+  projectId                String
+  project                  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trackerType              String   // substation | bus_shelter | guardrail
+  code                     String   // Stable item identifier, unique within a project
+  label                    String
+  sortOrder                Int      @default(0)
+  locationReference        String   @default("")
+  plannedLengthLm          Decimal? @db.Decimal(12, 2) // Guardrail sections
+  siteMeasurementDate      String   @default("") // YYYY-MM-DD or empty
+  drawingToProductionDate  String   @default("")
+  deliveryDate             String   @default("")
+  installationDate         String   @default("")
+  wirDate                  String   @default("")
+  wirStatus                String   @default("Not submitted")
+  wirReference             String   @default("")
+  remarks                  String   @default("") @db.Text
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@unique([projectId, code])
+  @@index([projectId, sortOrder])
 }
