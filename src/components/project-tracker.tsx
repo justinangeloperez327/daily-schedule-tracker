@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ClipboardList, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -167,7 +167,10 @@ export function ProjectTracker({ initialProjectId = "" }: { initialProjectId?: s
         body: JSON.stringify({ projectId, count: amount }),
       });
       setItems(result.items);
-      setDrafts(Object.fromEntries(result.items.map((item) => [item.id, draftFromItem(item)])));
+      // Preserve unsaved edits to existing rows when adding more assets.
+      setDrafts((previous) => Object.fromEntries(result.items.map((item) => [
+        item.id, previous[item.id] ?? draftFromItem(item),
+      ])));
       setNotice(selectedType === "substation"
         ? "The four Substation components are ready."
         : amount + " " + (selectedType === "bus_shelter" ? "shelter(s)" : "guardrail section(s)") + " added.");

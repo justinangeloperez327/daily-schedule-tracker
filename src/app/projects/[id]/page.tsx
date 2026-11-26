@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, FileText, Layers3, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { trackerTypeForProject } from "@/lib/project-tracker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +44,14 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
         <p className="mt-2 font-mono text-xs text-[#365F91]">
           JOB NO: {project.jobNo || "—"} <span className="mx-2 text-muted-foreground">/</span> SO NO: {project.soNo || "—"}
         </p>
+        {trackerTypeForProject(project) && (
+          <Link
+            href={"/trackers?projectId=" + encodeURIComponent(project.id)}
+            className="mt-4 inline-flex h-9 items-center rounded-md border border-[#365F91] bg-[#EAF2FC] px-4 text-sm font-medium text-primary hover:bg-[#DCEBFA]"
+          >
+            Open project tracker
+          </Link>
+        )}
       </div>
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.75fr)_minmax(290px,1fr)]">
