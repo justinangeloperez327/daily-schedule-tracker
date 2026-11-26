@@ -84,11 +84,7 @@ export function ProjectTracker({ initialProjectId = "" }: { initialProjectId?: s
   }, [initialProjectId]);
 
   React.useEffect(() => {
-    if (!projectId) {
-      setItems([]);
-      setDrafts({});
-      return;
-    }
+    if (!projectId) return;
     let alive = true;
     apiRequest<TrackerResponse>("/api/trackers?projectId=" + encodeURIComponent(projectId))
       .then((result) => {
@@ -312,7 +308,7 @@ export function ProjectTracker({ initialProjectId = "" }: { initialProjectId?: s
         </div>
         {selectedType === "guardrail" && (
           <p className="mt-3 text-xs leading-5 text-muted-foreground">
-            Guardrail is tracked by section or chainage. Record each section's location and planned length (lm),
+            Guardrail is tracked by section or chainage. Record the location and planned length (lm) for each section,
             then update its milestones and WIR separately.
           </p>
         )}
