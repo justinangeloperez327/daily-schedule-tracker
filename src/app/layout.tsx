@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { SiteHeader } from "@/components/site-header";
+import { AppShell } from "@/components/app-shell";
 import { getCurrentUser } from "@/lib/auth";
 import "./globals.css";
 
@@ -19,8 +19,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en">
       <body className={geist.variable + " " + geistMono.variable + " min-h-screen min-w-0 overflow-x-clip bg-background"}>
-        <SiteHeader user={user} />
-        {children}
+        <AppShell user={user}>{children}</AppShell>
       </body>
     </html>
   );

@@ -6,7 +6,7 @@ type Props = { searchParams: Promise<{ next?: string }> };
 
 // Only allow same-site relative redirects after sign-in.
 function safeNext(next?: string) {
-  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/schedules";
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : "/dashboard";
 }
 
 export default async function LoginPage({ searchParams }: Props) {

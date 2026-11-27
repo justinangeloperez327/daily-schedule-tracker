@@ -344,3 +344,11 @@ Each item records independent optional **Site Measurement Date, Drawing to Produ
 Every row uses a Save action. Newly added items inherit blank milestone values and Not submitted status; adding more items preserves unsaved drafts in existing rows. Data is stored in `ProjectTrackerItem` via an additive Prisma migration; project deletion cascades tracker rows, and daily schedule deletions do not touch them. Existing Projects, Schedules, Reports, Employees and Equipment tables are preserved. Guardrail anchor/base-plate inspection and installed linear metres are worthwhile **future optional fields**, not assumed or fabricated in this initial tracker.
 
 The existing manual Vercel deploy uses `prisma migrate deploy`; automatic deployments remain disabled.
+
+## Dashboard, sidebar and notifications (Nov 2026)
+
+- Navigation is a **left sidebar** (a slide-out drawer on phones). Signing in lands on **Dashboard** (`/dashboard`): jobs dispatched today, how many have a site daily report, labour and OT reported today, active projects, today's dispatch with a *Reported* / *Submit report* status per job, recent site reports and tracker progress.
+- The top bar has a **notification bell** and a **profile menu** (Profile, Manage users for admins, Sign out). `/profile` lets each user change their name and password (current password required; other devices are signed out).
+- Notifications are worked out from live data, not stored: jobs dispatched today with no site report yet, site reports other users submitted in the last 3 days, and tracker WIRs marked Rejected or Revise and resubmit in the last 30 days. Opening the bell marks them read (`User.notificationsSeenAt`), except a missing report, which stays unread until it is submitted.
+- "Today" uses the site's time zone, `Asia/Dubai` by default. Set `SITE_TIME_ZONE` (an IANA name) if the sites are elsewhere.
+- Migration `20261127085841_user_notifications_seen_at` adds one nullable column to `User`.

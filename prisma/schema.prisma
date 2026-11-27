@@ -9,24 +9,24 @@ datasource db {
 
 // A Project is the master list of selectable jobs; it can be assigned to many schedules.
 model Project {
-  id              String            @id @default(cuid())
-  soNo            String            @default("")
+  id              String               @id @default(cuid())
+  soNo            String               @default("")
   jobNo           String?
-  rev             String            @default("")
+  rev             String               @default("")
   clientName      String
-  mainCategory    String            @default("")
-  subCategory     String            @default("")
+  mainCategory    String               @default("")
+  subCategory     String               @default("")
   name            String
-  descriptions    String            @default("") @db.Text
-  contractValue   String            @default("")
-  paymentTerms    String            @default("") @db.Text
-  status          String            @default("")
-  projectInCharge String            @default("")
+  descriptions    String               @default("") @db.Text
+  contractValue   String               @default("")
+  paymentTerms    String               @default("") @db.Text
+  status          String               @default("")
+  projectInCharge String               @default("")
   scheduleJobs    ScheduleJob[]
   siteReports     SiteDailyReport[]
   trackerItems    ProjectTrackerItem[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   @@index([jobNo, rev])
   @@index([name])
@@ -152,16 +152,18 @@ model JobEquipment {
 
 // Application login. Passwords are stored as scrypt hashes, never in plain text.
 model User {
-  id           String            @id @default(cuid())
-  username     String            @unique
-  name         String
-  passwordHash String
-  role         String            @default("user") // "admin" | "user"
-  active       Boolean           @default(true)
-  sessions     Session[]
-  siteReports  SiteDailyReport[]
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id                  String            @id @default(cuid())
+  username            String            @unique
+  name                String
+  passwordHash        String
+  role                String            @default("user") // "admin" | "user"
+  active              Boolean           @default(true)
+  // Notifications newer than this are shown as unread in the top bar.
+  notificationsSeenAt DateTime?
+  sessions            Session[]
+  siteReports         SiteDailyReport[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 }
 
 // Server-side session. The browser cookie holds a random token; only its
@@ -228,29 +230,28 @@ model SiteReportEquipment {
   @@index([equipmentId])
 }
 
-
 // Per-project subcategory progress tracking. Items persist independently of
 // daily schedule dispatches and are never regenerated on page load.
 model ProjectTrackerItem {
-  id                       String   @id @default(cuid())
-  projectId                String
-  project                  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  trackerType              String   // substation | bus_shelter | guardrail
-  code                     String   // Stable item identifier, unique within a project
-  label                    String
-  sortOrder                Int      @default(0)
-  locationReference        String   @default("")
-  plannedLengthLm          Decimal? @db.Decimal(12, 2) // Guardrail sections
-  siteMeasurementDate      String   @default("") // YYYY-MM-DD or empty
-  drawingToProductionDate  String   @default("")
-  deliveryDate             String   @default("")
-  installationDate         String   @default("")
-  wirDate                  String   @default("")
-  wirStatus                String   @default("Not submitted")
-  wirReference             String   @default("")
-  remarks                  String   @default("") @db.Text
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  projectId               String
+  project                 Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trackerType             String // substation | bus_shelter | guardrail
+  code                    String // Stable item identifier, unique within a project
+  label                   String
+  sortOrder               Int      @default(0)
+  locationReference       String   @default("")
+  plannedLengthLm         Decimal? @db.Decimal(12, 2) // Guardrail sections
+  siteMeasurementDate     String   @default("") // YYYY-MM-DD or empty
+  drawingToProductionDate String   @default("")
+  deliveryDate            String   @default("")
+  installationDate        String   @default("")
+  wirDate                 String   @default("")
+  wirStatus               String   @default("Not submitted")
+  wirReference            String   @default("")
+  remarks                 String   @default("") @db.Text
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@unique([projectId, code])
   @@index([projectId, sortOrder])

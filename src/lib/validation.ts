@@ -183,3 +183,13 @@ export const siteReportInput = z.object({
     ctx.addIssue({ code: "custom", path: ["equipmentIds"], message: "Each vehicle can only appear once in the equipment list." });
   }
 });
+
+// Signed-in user updating their own profile. A password change needs the current password.
+export const profileUpdateInput = z.object({
+  name: requiredText.optional(),
+  currentPassword: z.string().max(200).optional(),
+  newPassword: password.optional(),
+}).strict().refine((data) => !data.newPassword || !!data.currentPassword, {
+  message: "Enter your current password to set a new one.",
+  path: ["currentPassword"],
+});
