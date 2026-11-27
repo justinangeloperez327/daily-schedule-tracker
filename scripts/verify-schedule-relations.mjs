@@ -74,6 +74,20 @@ try {
     jobIds[0],
     "Install delivered corner panels and top rail",
   ]);
+  // Check tracker milestones, per-project uniqueness, nullable guardrail length,
+  // and the project's cascade relationship without touching production data.
+  const trackerId = randomUUID();
+  await db.query(
+    'INSERT INTO "ProjectTrackerItem" ("id", "projectId", "trackerType", "code", "label", "siteMeasurementDate", "wirStatus", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())',
+    [trackerId, projectId, "substation", "SUB-DOOR-1", "Door 1", "2026-11-10", "Submitted"]
+  );
+  const trackerRows = await db.query(
+    'SELECT "label", "siteMeasurementDate", "wirStatus" FROM "ProjectTrackerItem" WHERE "projectId" = $1', [projectId]
+  );
+  assert.equal(trackerRows.rows.length, 1);
+  assert.equal(trackerRows.rows[0].label, "Door 1");
+  assert.equal(trackerRows.rows[0].siteMeasurementDate, "2026-11-10");
+  assert.equal(trackerRows.rows[0].wirStatus, "Submitted");
   const { rows } = await db.query(
     `SELECT j."id", j."dailyTarget",
         COUNT(DISTINCT f."employeeId")::int AS foremen,
@@ -108,7 +122,15 @@ try {
   const retainedEquipment = await db.query('SELECT COUNT(*)::int AS count FROM "Equipment"');
   assert.equal(retainedEquipment.rows[0].count, 2, "Deleting a schedule must not delete equipment catalog records");
 
-  console.log("Schedule relationship smoke test passed: 2 jobs, each with 2 foremen, 2 labourers, and 2 equipment items.");
+  // A tracker belongs to its project, not a daily schedule. Removing the
+  // project must cascade its tracker rows rather than leave orphaned assets.
+  await db.query('DELETE FROM "Project" WHERE "id" = $1', [projectId]);
+  const removedTrackers = await db.query(
+    'SELECT COUNT(*)::int AS count FROM "ProjectTrackerItem" WHERE "projectId" = $1', [projectId]
+  );
+  assert.equal(removedTrackers.rows[0].count, 0, "Tracker items must cascade when the project is deleted");
+
+  console.log("Schedule and project tracker relationship smoke tests passed.");
 } finally {
   await db.query("ROLLBACK").catch(() => undefined);
   await db.end();
