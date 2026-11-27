@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,8 @@ export function ProjectTrackerPanel({ projectId, trackerType: selectedType, onDi
   const [savingId, setSavingId] = React.useState<string | null>(null);
   const [error, setError] = React.useState("");
   const [notice, setNotice] = React.useState("");
+  // Re-renders server components (e.g. the progress tile on project details) after a change.
+  const router = useRouter();
 
   React.useEffect(() => {
     let alive = true;
@@ -130,6 +133,7 @@ export function ProjectTrackerPanel({ projectId, trackerType: selectedType, onDi
       setNotice(selectedType === "substation"
         ? "The four Substation components are ready."
         : amount + " " + (selectedType === "bus_shelter" ? "shelter(s)" : "guardrail section(s)") + " added.");
+      router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to add tracker items.");
     } finally { setAdding(false); }
@@ -150,6 +154,7 @@ export function ProjectTrackerPanel({ projectId, trackerType: selectedType, onDi
       setItems((current) => current.map((entry) => entry.id === item.id ? result : entry));
       setDrafts((current) => ({ ...current, [item.id]: draftFromItem(result) }));
       setNotice(result.label + " saved.");
+      router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to save milestone row.");
     } finally { setSavingId(null); }
@@ -168,6 +173,7 @@ export function ProjectTrackerPanel({ projectId, trackerType: selectedType, onDi
         return copy;
       });
       setNotice(item.label + " removed.");
+      router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to remove item.");
     } finally { setSavingId(null); }

@@ -41,12 +41,12 @@ function blankRows<T>(count: number, make: () => T) {
 
 const selectClass = "h-10 w-full min-w-0 rounded-md border border-input bg-white px-2.5 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50";
 
-export function SiteReportEditor({ reportId }: { reportId?: string }) {
+export function SiteReportEditor({ reportId, initialProjectId = "" }: { reportId?: string; initialProjectId?: string }) {
   const router = useRouter();
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [employees, setEmployees] = React.useState<Employee[]>([]);
   const [equipments, setEquipments] = React.useState<Equipment[]>([]);
-  const [projectId, setProjectId] = React.useState("");
+  const [projectId, setProjectId] = React.useState(reportId ? "" : initialProjectId);
   const [date, setDate] = React.useState("");
   const [activityDescription, setActivityDescription] = React.useState("");
   const [remarks, setRemarks] = React.useState("");
