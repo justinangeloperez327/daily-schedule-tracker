@@ -335,7 +335,7 @@ The former active-job state was removed from the shared resource sidebar. The dr
 
 ## Project Subcategory Milestone Trackers (Nov 2026)
 
-An authenticated **Trackers** page is available from the top navigation and from supported Project Details pages. It links each tracker to the existing Project master record, using the project's **Sub Category** (or Main Category only when Sub Category is blank) to determine the template. Supported labels are **Substation, Bus Shelter(s), Guardrail(s)**. Other subcategories do not create trackers until classified.
+Each tracker is shown at the bottom of its **Project Details** page (there is no separate Trackers page). It links each tracker to the existing Project master record, using the project's **Sub Category** (or Main Category only when Sub Category is blank) to determine the template. Supported labels are **Substation, Bus Shelter(s), Guardrail(s)**. Other subcategories do not create trackers until classified.
 
 The Substation template creates four fixed rows (Door 1, Door 2, Grating Support, Grating Panel). Reusing the Create/Restore action is **idempotent** and never overwrites existing milestones. Bus Shelter projects add user-specified rows (e.g. 6 shelters create Bus Shelter 01 through 06). Guardrail projects add separately identifiable sections (e.g. Guardrail Section 01), with optional **Location/Chainage** and **Planned Length (lm)**. Users can add additional shelter/guardrail rows later, rename individual items, or delete an erroneous non-Substation row with confirmation.
 

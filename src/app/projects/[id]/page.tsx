@@ -101,12 +101,6 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30">
             <ClipboardPlus className="size-4" aria-hidden="true" /> New site report
           </Link>
-          {trackerType && (
-            <a href="#tracker"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-input bg-white px-4 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30">
-              <ClipboardList className="size-4" aria-hidden="true" /> Go to tracker
-            </a>
-          )}
         </div>
       </header>
 
@@ -213,11 +207,6 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
               {trackerType ? trackerTypeLabels[trackerType] + " Tracker" : "Tracker"}
             </h2>
           </div>
-          {trackerType && (
-            <Link href={"/trackers?projectId=" + encodeURIComponent(project.id)} className="text-xs text-[#365F91] hover:underline">
-              Open in all-projects tracker
-            </Link>
-          )}
         </div>
         {trackerType ? (
           <ProjectTrackerPanel key={project.id} projectId={project.id} trackerType={trackerType} />
