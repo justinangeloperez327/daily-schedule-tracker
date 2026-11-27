@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, BriefcaseBusiness, FileText, Layers3, UserRound } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, ClipboardList, FileText, Layers3, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
-import { trackerTypeForProject } from "@/lib/project-tracker";
+import { trackerTypeForProject, trackerTypeLabels } from "@/lib/project-tracker";
+import { ProjectTrackerPanel } from "@/components/project-tracker-panel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
   const { id } = await params;
   const project = await getPrisma().project.findUnique({ where: { id } });
   if (!project) notFound();
+  const trackerType = trackerTypeForProject(project);
 
   return (
     <main className="min-h-[calc(100vh-64px)] w-full min-w-0 bg-background px-3 pb-12 pt-6 sm:px-6 lg:px-8 2xl:px-10 lg:pt-12">
@@ -44,13 +46,13 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
         <p className="mt-2 font-mono text-xs text-[#365F91]">
           JOB NO: {project.jobNo || "—"} <span className="mx-2 text-muted-foreground">/</span> SO NO: {project.soNo || "—"}
         </p>
-        {trackerTypeForProject(project) && (
-          <Link
-            href={"/trackers?projectId=" + encodeURIComponent(project.id)}
+        {trackerType && (
+          <a
+            href="#tracker"
             className="mt-4 inline-flex h-9 items-center rounded-md border border-[#365F91] bg-[#EAF2FC] px-4 text-sm font-medium text-primary hover:bg-[#DCEBFA]"
           >
-            Open project tracker
-          </Link>
+            Go to {trackerTypeLabels[trackerType]} tracker
+          </a>
         )}
       </div>
 
@@ -98,6 +100,31 @@ export default async function ProjectDetailsPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      <section id="tracker" className="mt-8 min-w-0 scroll-mt-6">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="technical-eyebrow mb-1">PROJECT TRACKER</p>
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-primary">
+              <ClipboardList className="size-5 text-[#365F91]" aria-hidden="true" />
+              {trackerType ? trackerTypeLabels[trackerType] + " Tracker" : "Tracker"}
+            </h2>
+          </div>
+          {trackerType && (
+            <Link href={"/trackers?projectId=" + encodeURIComponent(project.id)} className="text-xs text-[#365F91] underline">
+              Open in all-projects tracker
+            </Link>
+          )}
+        </div>
+        {trackerType ? (
+          <ProjectTrackerPanel key={project.id} projectId={project.id} trackerType={trackerType} />
+        ) : (
+          <div className="rounded-xl border border-dashed border-border bg-white px-4 py-10 text-center text-sm text-muted-foreground">
+            No tracker template for the sub category &ldquo;{project.subCategory || project.mainCategory || "not set"}&rdquo;.
+            Trackers exist for Substation, Bus Shelters and Guardrail projects.
+          </div>
+        )}
+      </section>
     </main>
   );
 }
